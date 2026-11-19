@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T16:38:29.133967+00:00
+Updated (UTC): 2026-11-19T16:47:30.555678+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 3.12 h; remaining: 68.88 h
+Elapsed: 3.27 h; remaining: 68.73 h
 
 ## Target
 
@@ -20,7 +20,7 @@ Elapsed: 3.12 h; remaining: 68.88 h
 - Capital blocked by venue minimum lots: 50.00 RUB
 - Lowest configured crypto minimum-order capital: 120.63 RUB; budget shortfall: 20.63 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
-- Cumulative rejected minimum-size orders: 24; new rejections this run: 12
+- Cumulative rejected minimum-size orders: 24; new rejections this run: 0
 
 ## Fractional shadow portfolio — NON-EXECUTABLE
 
