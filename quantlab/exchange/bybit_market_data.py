@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from quantlab.exchange.bybit_demo import _require_success, build_demo_session
+from quantlab.exchange.bybit_demo import _require_success, build_public_market_session
 
 RAW_DIR = Path("data/raw")
 REPORT_PATH = Path("reports/bybit_demo_market_data.json")
@@ -28,7 +28,7 @@ def fetch_demo_market_data(
         raise ValueError(f"Unsupported Bybit kline interval: {interval}")
     if not 1 <= int(limit) <= 1000:
         raise ValueError("limit must be between 1 and 1000")
-    session = client or build_demo_session()
+    session = client or build_public_market_session()
     now = now or datetime.now(timezone.utc)
     duration = timedelta(minutes=TIMEFRAME_MINUTES[interval])
     raw_dir, report_path = Path(raw_dir), Path(report_path)
@@ -85,8 +85,8 @@ def fetch_demo_market_data(
         })
 
     report = {
-        "checked_at_utc": now.isoformat(), "exchange": "Bybit", "environment": "DEMO",
-        "market_data": summaries, "orders_submitted": 0, "real_trading_enabled": False,
+        "checked_at_utc": now.isoformat(), "exchange": "Bybit", "environment": "MAINNET_PUBLIC_MARKET_DATA",
+        "market_data": summaries, "orders_submitted": 0, "real_trading_enabled": False,\n        "source_note": "Unauthenticated public market-data endpoint; Demo account credentials are not used.",
         "status": "DATA_RECEIVED",
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
