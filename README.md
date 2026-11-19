@@ -11,7 +11,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - Isolated-margin futures backtests for Kraken linear PF perpetuals using observed historical relative funding rates and mark-price candles; results are written separately from spot/FX reports.
 - Stateful virtual spot accounts for crypto and FX proxy datasets, plus persistent isolated-margin futures accounts: buys/sells, wallet, margin, quantity, equity, realized/unrealized PnL, funding and liquidations. Position sizing is capped by a configurable fraction of available cash.
 - Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
-- GitHub Actions runs tests and research on pushes to main and hourly (UTC).
+- GitHub Actions runs tests and research on pushes to main and hourly (UTC). The paper summary tracks a 72-hour baseline experiment window and its elapsed/remaining time.
 
 ## Important model boundaries
 - The 100 RUB to 10,000 RUB in 72 hours objective is an extreme experimental target, not a forecast or promise.
