@@ -274,10 +274,10 @@ def run_paper(cfg):
             ).isoformat()
 
             if sleeve == "crypto_futures_sim":
+                futures_cfg = cfg["futures"]
                 if experiment["status"] == "COMPLETED":
                     event = {"timestamp": bar_time, "status": "experiment_completed"}
                 else:
-                    futures_cfg = cfg["futures"]
                     account, event = apply_isolated_futures_signal(
                         account,
                         signal,
