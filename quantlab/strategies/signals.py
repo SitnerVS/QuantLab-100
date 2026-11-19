@@ -21,9 +21,17 @@ def build_signals(frame):
     data["bb_std"] = close.rolling(20).std()
     data["bb_lower"] = data["bb_mid"] - 2 * data["bb_std"]
     data["donchian_upper_prev"] = data["high"].rolling(20).max().shift(1)
+    data["sma_fast"] = close.rolling(20).mean()
+    data["sma_slow"] = close.rolling(50).mean()
+    data["macd_line"] = close.ewm(span=12, adjust=False).mean() - close.ewm(span=26, adjust=False).mean()
+    data["macd_signal_line"] = data["macd_line"].ewm(span=9, adjust=False).mean()
+    data["roc_12"] = close.pct_change(12)
 
     data["ema_signal"] = (data["ema_fast"] > data["ema_slow"]).astype(int)
     data["rsi_signal"] = (data["rsi"] < 30).astype(int)
     data["bb_signal"] = (close < data["bb_lower"]).astype(int)
     data["donchian_signal"] = (close > data["donchian_upper_prev"]).astype(int)
+    data["sma_signal"] = (data["sma_fast"] > data["sma_slow"]).astype(int)
+    data["macd_signal"] = (data["macd_line"] > data["macd_signal_line"]).astype(int)
+    data["roc_signal"] = (data["roc_12"] > 0).astype(int)
     return data

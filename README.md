@@ -5,7 +5,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 ## Current capabilities
 - Public historical market data: Kraken spot OHLCV through CCXT; Kraken Futures linear perpetual mark-price candles and historical relative funding rates; Yahoo Finance FX proxy data through yfinance.
 - A data-quality gate reports missing datasets, schema issues, duplicate timestamps, missing/invalid OHLCV rows and data freshness before research runs.
-- EMA, RSI, Bollinger and Donchian signal families for baseline research.
+- EMA/SMA crossovers, RSI, Bollinger, Donchian breakout, MACD and 12-bar momentum signal families for baseline research.
 - Long/flat historical backtest with configurable fees, slippage and half-spread per fill, buy-and-hold benchmark, drawdown, annualized rough Sharpe, bar-level profit factor and win rate.
 - Rolling chronological out-of-sample test windows for fixed causal signals, plus an aggregated ranking by median fold return and positive-fold share; these are evaluation folds, not parameter optimization.
 - Isolated-margin futures backtests for Kraken linear PF perpetuals using observed historical relative funding rates and mark-price candles; results are written separately from spot/FX reports.

@@ -15,6 +15,10 @@ from quantlab.strategies import build_signals
 
 RAW = Path("data/raw")
 REPORTS = Path("reports")
+STRATEGIES = (
+    "ema_signal", "rsi_signal", "bb_signal", "donchian_signal",
+    "sma_signal", "macd_signal", "roc_signal",
+)
 
 
 def run_backtests(cfg):
@@ -55,7 +59,7 @@ def run_backtests(cfg):
                 fee = float(futures_cfg["fee_rate"])
                 slippage = float(futures_cfg["slippage_rate"])
                 spread = float(futures_cfg["spread_rate"])
-                for strategy in ("ema_signal", "rsi_signal", "bb_signal", "donchian_signal"):
+                for strategy in STRATEGIES:
                     result, metrics = simulate_isolated_long(
                         enriched,
                         signal_col=strategy,
@@ -121,7 +125,7 @@ def run_backtests(cfg):
             spread = float(cfg["costs"].get("crypto_spread_rate" if is_crypto else "forex_spread_rate", 0.0))
             slippage = float(cfg["costs"]["slippage_rate"])
 
-            for strategy in ("ema_signal", "rsi_signal", "bb_signal", "donchian_signal"):
+            for strategy in STRATEGIES:
                 result, metrics = simulate(
                     enriched,
                     strategy,
