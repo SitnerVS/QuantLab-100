@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "created_at": "2026-11-19T12:58:26.819305+00:00",
+  "schema_version": 6,
+  "created_at": "2026-11-19T13:21:27.100681+00:00",
   "accounts": {
     "crypto_BTC_USD_1h": {
       "initial_cash": 0.1015672941906223,
@@ -115,15 +115,120 @@
         }
       ],
       "initial_capital_rub": 12.5
+    },
+    "futures_PF_ETHUSD_1h": {
+      "initial_cash": 0.1015672941906223,
+      "wallet": 0.07617547064296673,
+      "position": {
+        "quantity": 2.812958990696199e-05,
+        "entry_price": 1805.3461590900174,
+        "margin_allocated": 0.025391823547655575,
+        "margin_balance": 0.02536135335939839,
+        "funding_paid": 0.0
+      },
+      "realized_pnl": 0.0,
+      "funding_paid": 0.0,
+      "fees_paid": 3.0470188257186686e-05,
+      "closed_trades": 0,
+      "liquidations": 0,
+      "last_bar": "2026-11-19T12:00:00+00:00",
+      "ledger": [
+        {
+          "timestamp": "2026-11-19T12:00:00+00:00",
+          "signal": 1,
+          "status": "open",
+          "funding_payment": 0.0,
+          "fee": 3.0470188257186686e-05,
+          "liquidated": false,
+          "fill_price": 1805.3461590900174,
+          "quantity": 2.812958990696199e-05,
+          "wallet": 0.07617547064296673,
+          "margin_balance": 0.02536135335939839,
+          "unrealized_pnl": -3.04519171069171e-05,
+          "equity": 0.1015063720852582,
+          "realized_pnl": 0.0
+        }
+      ],
+      "initial_capital_rub": 8.333333333333334
+    },
+    "futures_PF_SOLUSD_1h": {
+      "initial_cash": 0.1015672941906223,
+      "wallet": 0.07617547064296673,
+      "position": {
+        "quantity": 0.0006786904087636928,
+        "entry_price": 74.82593895472752,
+        "margin_allocated": 0.025391823547655575,
+        "margin_balance": 0.02536135335939839,
+        "funding_paid": 0.0
+      },
+      "realized_pnl": 0.0,
+      "funding_paid": 0.0,
+      "fees_paid": 3.0470188257186686e-05,
+      "closed_trades": 0,
+      "liquidations": 0,
+      "last_bar": "2026-11-19T12:00:00+00:00",
+      "ledger": [
+        {
+          "timestamp": "2026-11-19T12:00:00+00:00",
+          "signal": 1,
+          "status": "open",
+          "funding_payment": 0.0,
+          "fee": 3.0470188257186686e-05,
+          "liquidated": false,
+          "fill_price": 74.82593895472752,
+          "quantity": 0.0006786904087636928,
+          "wallet": 0.07617547064296673,
+          "margin_balance": 0.02536135335939839,
+          "unrealized_pnl": -3.0451917106922357e-05,
+          "equity": 0.1015063720852582,
+          "realized_pnl": 0.0
+        }
+      ],
+      "initial_capital_rub": 8.333333333333334
+    },
+    "futures_PF_XBTUSD_1h": {
+      "initial_cash": 0.1015672941906223,
+      "wallet": 0.07617547064296673,
+      "position": {
+        "quantity": 7.953794599339491e-07,
+        "entry_price": 63848.326054998186,
+        "margin_allocated": 0.025391823547655575,
+        "margin_balance": 0.02536135335939839,
+        "funding_paid": 0.0
+      },
+      "realized_pnl": 0.0,
+      "funding_paid": 0.0,
+      "fees_paid": 3.0470188257186686e-05,
+      "closed_trades": 0,
+      "liquidations": 0,
+      "last_bar": "2026-11-19T12:00:00+00:00",
+      "ledger": [
+        {
+          "timestamp": "2026-11-19T12:00:00+00:00",
+          "signal": 1,
+          "status": "open",
+          "funding_payment": 0.0,
+          "fee": 3.0470188257186686e-05,
+          "liquidated": false,
+          "fill_price": 63848.326054998186,
+          "quantity": 7.953794599339491e-07,
+          "wallet": 0.07617547064296673,
+          "margin_balance": 0.02536135335939839,
+          "unrealized_pnl": -3.0451917106919308e-05,
+          "equity": 0.1015063720852582,
+          "realized_pnl": 0.0
+        }
+      ],
+      "initial_capital_rub": 8.333333333333334
     }
   },
   "unsupported_sleeves": {
-    "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
-    "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated"
+    "forex_leveraged_sim": "disabled_until_broker_grade_FX_margin_and_rollover_data_exists"
   },
   "base_currency": "RUB",
   "quote_currency": "USD",
   "usd_rub_rate": 82.04740905761719,
   "usd_rub_timestamp_utc": "2026-11-18T00:00:00+00:00",
-  "updated_at": "2026-11-19T13:16:21.077642+00:00"
+  "updated_at": "2026-11-19T13:21:27.100681+00:00",
+  "experiment_id": "quantlab-100-paper-72h-v1"
 }
