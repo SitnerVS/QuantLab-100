@@ -70,7 +70,6 @@ def run_paper(cfg):
     # Backward-compatible state migration from the initial signal-only prototype.
     state.setdefault("schema_version", 2)
     state.setdefault("accounts", {})
-    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name))
     state.setdefault("unsupported_sleeves", {
         "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
         "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated",
