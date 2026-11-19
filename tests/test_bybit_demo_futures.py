@@ -119,3 +119,19 @@ def test_rejects_missing_instrument_minimum(tmp_path):
 
     with pytest.raises(RuntimeError, match="minimum order quantity"):
         _collect(InvalidInstrumentClient(), tmp_path)
+
+
+def test_public_market_session_uses_unauthenticated_bytick_mainnet(monkeypatch):
+    import pybit.unified_trading
+    from quantlab.exchange.bybit_demo import build_public_market_session
+
+    captured = {}
+
+    class FakeHTTP:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(pybit.unified_trading, "HTTP", FakeHTTP)
+    session = build_public_market_session()
+    assert isinstance(session, FakeHTTP)
+    assert captured == {"testnet": False, "demo": False, "domain": "bytick"}
