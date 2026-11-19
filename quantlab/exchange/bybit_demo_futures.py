@@ -245,7 +245,7 @@ def fetch_bybit_demo_futures_data(
         "exchange": "Bybit",
         "environment": "MAINNET_PUBLIC_MARKET_DATA",
         "market_type": "linear_perpetual",
-        "market_data_endpoint": "api.bytick.com",
+        "market_data_endpoint": "api.bybit.com",
         "source_note": "Unauthenticated mainnet public market data; Bybit documents Demo public market data as identical to mainnet public market data.",
         "price_basis": "mark",
         "volume_note": "Mark-price kline endpoint does not return traded volume; volume and turnover are zero placeholders.",
