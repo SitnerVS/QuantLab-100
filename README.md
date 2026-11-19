@@ -34,6 +34,16 @@ python -m python -m pytest -q
 ## GitHub Actions
 The workflow runs tests and the research pipeline on pushes to main, pull requests (tests and research without committing), manual dispatch, and hourly UTC schedule. Research artifacts are retained for 14 days. Scheduled GitHub Actions can be delayed and are not a continuous trading server.
 
+## Reports
+- `reports/data_quality.csv` — expected data sources, validity and freshness.
+- `reports/backtest_summary.csv` — historical strategy metrics and buy-and-hold comparison.
+- `reports/walk_forward_summary.csv` — each chronological out-of-sample test window.
+- `reports/walk_forward_ranking.csv` — aggregated ranking by out-of-sample folds.
+- `reports/paper_portfolio_latest.csv` — virtual account balances and mark-to-market snapshots.
+- `reports/paper_portfolio_summary.csv` — active/inactive capital and total virtual performance.
+- `reports/paper_events_latest.csv` — latest virtual fills and position events.
+
+
 ## Roadmap
 1. Complete and validate the event-driven paper engine and its persistence (current implementation is initial spot-only version).
 2. Improve data validation, source health checks and instrument metadata.
