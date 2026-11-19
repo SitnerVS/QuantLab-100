@@ -45,7 +45,6 @@ jobs:
         env:
           BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
           BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
-        env:
           PYTHONFAULTHANDLER: "1"
         run: |
           .venv/bin/python --version
