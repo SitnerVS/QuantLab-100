@@ -101,13 +101,16 @@ def _latest_closed_bar(frame, filename, cfg, now):
     return clean.iloc[-1], clean
 
 
-def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate):
+def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate, max_position_fraction=1.0):
     close = float(latest["close"])
     equity = float(account["cash"]) + float(account["quantity"]) * close
     unrealized = (
         float(account["quantity"]) * (close - float(account["position_entry_price"]))
         if account["quantity"] > 0 and account["position_entry_price"] is not None else 0.0
     )
+    min_quantity = float(latest.get("min_order_size", 0.0) or 0.0)
+    min_notional = float(latest.get("min_notional_usd", 0.0) or 0.0)
+    required_capital_usd = max(min_quantity * close, min_notional) / max(float(max_position_fraction), 1e-12)
     return {
         "dataset": key,
         "sleeve": sleeve,
@@ -127,6 +130,9 @@ def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_r
         "funding_paid_usd": 0.0,
         "fees_paid_usd": float(account.get("fees_paid", 0.0)),
         "rejected_min_size": int(account.get("rejected_min_size", 0)),
+        "minimum_order_quantity": min_quantity,
+        "minimum_order_notional_usd": min_notional,
+        "required_account_capital_rub_for_minimum_order": required_capital_usd * usd_rub_rate,
         "liquidations": 0,
         "closed_trades": int(account["trade_count"] // 2),
         "trade_count": int(account["trade_count"]),
@@ -134,7 +140,7 @@ def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_r
     }
 
 
-def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate):
+def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate, leverage, max_margin_fraction):
     mark = float(latest["close"])
     position = account.get("position")
     quantity = float(position["quantity"]) if position is not None else 0.0
@@ -144,6 +150,11 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
         if position is not None else 0.0
     )
     equity = float(account["wallet"]) + margin_balance + unrealized
+    min_quantity = float(latest.get("min_order_size", 0.0) or 0.0)
+    required_capital_usd = (
+        min_quantity * mark / (float(leverage) * float(max_margin_fraction))
+        if min_quantity > 0 else 0.0
+    )
     return {
         "dataset": key,
         "sleeve": sleeve,
@@ -164,6 +175,9 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
         "fees_paid_usd": float(account["fees_paid"]),
         "liquidations": int(account["liquidations"]),
         "rejected_min_size": int(account.get("rejected_min_size", 0)),
+        "minimum_order_quantity": min_quantity,
+        "minimum_order_notional_usd": min_quantity * mark,
+        "required_account_capital_rub_for_minimum_order": required_capital_usd * usd_rub_rate,
         "closed_trades": int(account["closed_trades"]),
         "trade_count": int(account["closed_trades"] + account["liquidations"]),
         "execution_model": "previous_bar_signal_mark_close_proxy_observed_funding",
@@ -282,6 +296,8 @@ def run_paper(cfg):
                 snapshot = _snapshot_futures(
                     account, latest, sleeve, key, bar_time,
                     float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                    leverage=float(futures_cfg["leverage"]),
+                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
                 )
             else:
                 if experiment["status"] == "COMPLETED":
@@ -303,6 +319,7 @@ def run_paper(cfg):
                 snapshot = _snapshot_spot(
                     account, latest, sleeve, key, bar_time,
                     float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
                 )
 
             state["accounts"][key] = account
@@ -334,6 +351,12 @@ def run_paper(cfg):
         for key, account in state["accounts"].items()
         if key.startswith("forex_")
     )
+    crypto_min_capital_requirements = [
+        float(row["required_account_capital_rub_for_minimum_order"])
+        for row in snapshots
+        if row["sleeve"] in ("crypto_spot", "crypto_futures_sim")
+        and float(row["required_account_capital_rub_for_minimum_order"]) > 0
+    ]
     total_capital_rub = float(cfg["capital"]["total_rub"])
     summary = pd.DataFrame([{
         "timestamp_utc": now.isoformat(),
@@ -353,6 +376,7 @@ def run_paper(cfg):
         "minimum_lot_blocked_capital_rub": minimum_lot_blocked_rub,
         "capital_not_blocked_by_crypto_minimums_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
         "fx_proxy_capital_rub": fx_proxy_capital_rub,
+        "lowest_crypto_min_order_capital_rub": min(crypto_min_capital_requirements) if crypto_min_capital_requirements else 0.0,
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
         "accounts": len(snapshots),
