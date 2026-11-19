@@ -186,6 +186,112 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
 
 
 
+
+def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rate, now):
+    """Run a separate non-executable fractional-lot research portfolio."""
+    events = []
+    snapshots = []
+    for path in paths:
+        sleeve = _dataset_sleeve(path.name)
+        if sleeve is None or counts.get(sleeve, 0) <= 0:
+            continue
+        try:
+            frame = pd.read_csv(path)
+            frame.columns = [str(col).lower() for col in frame.columns]
+            required = {"open", "high", "low", "close", "volume"}
+            if sleeve == "crypto_futures_sim":
+                required.add("funding_rate")
+            if not required.issubset(frame.columns) or len(frame) < 60:
+                continue
+
+            latest_result = _latest_closed_bar(frame, path.name, cfg, now)
+            if latest_result is None:
+                continue
+            latest_row, closed_frame = latest_result
+            enriched = build_signals(closed_frame)
+            signal = _paper_signal_for_latest(enriched)
+            if signal is None:
+                continue
+            latest = enriched.iloc[-1].copy()
+            latest["paper_signal"] = signal
+
+            key = path.stem
+            account = accounts.get(key)
+            if account is None:
+                if experiment["status"] == "COMPLETED":
+                    continue
+                sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
+                allocation_rub = sleeve_capital / max(1, counts[sleeve])
+                allocation_usd = rub_to_usd(allocation_rub, usd_rub_rate)
+                account = (
+                    new_futures_account(allocation_usd)
+                    if sleeve == "crypto_futures_sim"
+                    else new_account(allocation_usd)
+                )
+                account["initial_capital_rub"] = allocation_rub
+
+            bar_time = pd.to_datetime(
+                latest_row.get("timestamp", latest_row.get("datetime", latest_row.get("date"))),
+                utc=True,
+            ).isoformat()
+
+            if experiment["status"] == "COMPLETED":
+                event = {"timestamp": bar_time, "status": "experiment_completed"}
+            elif sleeve == "crypto_futures_sim":
+                futures_cfg = cfg["futures"]
+                account, event = apply_isolated_futures_signal(
+                    account,
+                    signal,
+                    float(latest["close"]),
+                    float(latest["funding_rate"]),
+                    bar_time,
+                    leverage=float(futures_cfg["leverage"]),
+                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                    fee_rate=float(futures_cfg["fee_rate"]),
+                    slippage_rate=float(futures_cfg["slippage_rate"]),
+                    spread_rate=float(futures_cfg["spread_rate"]),
+                    maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                    liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                    min_order_size=0.0,
+                )
+            else:
+                costs = cfg["costs"]
+                account, event = apply_paper_signal(
+                    account,
+                    signal,
+                    float(latest["close"]),
+                    bar_time,
+                    fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
+                    slippage_rate=float(costs["slippage_rate"]),
+                    spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
+                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                    min_order_size=0.0,
+                    min_notional=0.0,
+                )
+
+            if sleeve == "crypto_futures_sim":
+                snapshot = _snapshot_futures(
+                    account, latest, sleeve, key, bar_time,
+                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                    leverage=float(futures_cfg["leverage"]),
+                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                )
+            else:
+                snapshot = _snapshot_spot(
+                    account, latest, sleeve, key, bar_time,
+                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                )
+            snapshot["execution_model"] = "fractional_shadow_ignore_venue_minimums"
+            snapshot["venue_minimums_ignored"] = True
+            accounts[key] = account
+            events.append({"dataset": key, "sleeve": sleeve, **event})
+            snapshots.append(snapshot)
+        except Exception as exc:
+            print(f"[fractional shadow] ERROR {path.name}: {exc}")
+    return events, snapshots
+
+
 def _portfolio_target_metrics(
     active_equity_rub,
     inactive_capital_rub,
@@ -354,10 +460,17 @@ def run_paper(cfg):
         except Exception as exc:
             print(f"[paper] ERROR {path.name}: {exc}")
 
+    state.setdefault("fractional_accounts", {})
+    fractional_events, fractional_snapshots = _run_fractional_shadow(
+        cfg, paths, counts, state["fractional_accounts"], experiment, usd_rub_rate, now
+    )
+
     state["updated_at"] = now.isoformat()
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     pd.DataFrame(events).to_csv(REPORTS / "paper_events_latest.csv", index=False)
     pd.DataFrame(snapshots).to_csv(REPORTS / "paper_portfolio_latest.csv", index=False)
+    pd.DataFrame(fractional_events).to_csv(REPORTS / "paper_fractional_events_latest.csv", index=False)
+    pd.DataFrame(fractional_snapshots).to_csv(REPORTS / "paper_fractional_portfolio_latest.csv", index=False)
 
     active_initial_rub = sum(row["initial_capital_rub"] for row in snapshots)
     total_equity_rub = sum(row["equity_rub_estimate"] for row in snapshots)
@@ -431,6 +544,71 @@ def run_paper(cfg):
         "real_orders": False,
     }])
     summary.to_csv(REPORTS / "paper_portfolio_summary.csv", index=False)
+
+    fractional_active_initial_rub = sum(row["initial_capital_rub"] for row in fractional_snapshots)
+    fractional_active_equity_rub = sum(row["equity_rub_estimate"] for row in fractional_snapshots)
+    fractional_inactive_capital_rub = max(0.0, total_capital_rub - fractional_active_initial_rub)
+    fractional_target_metrics = _portfolio_target_metrics(
+        fractional_active_equity_rub,
+        fractional_inactive_capital_rub,
+        total_capital_rub,
+        target_equity_rub=target_equity_rub,
+        duration_hours=72.0,
+    )
+    fractional_minimum_blocked_rub = sum(
+        float(row["initial_capital_rub"])
+        for row in fractional_snapshots
+        if row["sleeve"] in ("crypto_spot", "crypto_futures_sim")
+        and float(row["required_account_capital_rub_for_minimum_order"]) > float(row["initial_capital_rub"])
+    )
+    fractional_fx_proxy_capital_rub = sum(
+        float(row["initial_capital_rub"])
+        for row in fractional_snapshots
+        if row["sleeve"] == "forex_spot_sim"
+    )
+    fractional_minimum_requirements = [
+        float(row["required_account_capital_rub_for_minimum_order"])
+        for row in fractional_snapshots
+        if row["sleeve"] in ("crypto_spot", "crypto_futures_sim")
+        and float(row["required_account_capital_rub_for_minimum_order"]) > 0
+    ]
+    fractional_summary = pd.DataFrame([{
+        "timestamp_utc": now.isoformat(),
+        "experiment_id": state["experiment_id"],
+        "experiment_start_utc": experiment["start_utc"],
+        "experiment_end_utc": experiment["end_utc"],
+        "experiment_elapsed_hours": experiment["elapsed_hours"],
+        "experiment_remaining_hours": experiment["remaining_hours"],
+        "experiment_status": experiment["status"],
+        "execution_mode": "fractional_shadow_non_executable",
+        "execution_warning": "Fractional orders ignore venue minimums and cannot be placed at the venue.",
+        "venue_minimums_ignored": True,
+        "target_equity_rub": target_equity_rub,
+        **fractional_target_metrics,
+        "base_currency": "RUB",
+        "usd_rub_rate": usd_rub_rate,
+        "active_initial_capital_rub": fractional_active_initial_rub,
+        "inactive_capital_rub": fractional_inactive_capital_rub,
+        "minimum_lot_blocked_capital_rub": fractional_minimum_blocked_rub,
+        "capital_not_blocked_by_crypto_minimums_rub": max(0.0, fractional_active_initial_rub - fractional_minimum_blocked_rub),
+        "fx_proxy_capital_rub": fractional_fx_proxy_capital_rub,
+        "lowest_crypto_min_order_capital_rub": min(fractional_minimum_requirements) if fractional_minimum_requirements else 0.0,
+        "active_equity_rub_estimate": fractional_active_equity_rub,
+        "active_return_pct": ((fractional_active_equity_rub / fractional_active_initial_rub) - 1.0) * 100.0 if fractional_active_initial_rub else 0.0,
+        "realized_pnl_rub_estimate": sum(float(row["realized_pnl_rub_estimate"]) for row in fractional_snapshots),
+        "unrealized_pnl_rub_estimate": sum(float(row["unrealized_pnl_usd"]) * usd_rub_rate for row in fractional_snapshots),
+        "fees_paid_usd": sum(float(row.get("fees_paid_usd", 0.0)) for row in fractional_snapshots),
+        "funding_paid_usd": sum(float(row.get("funding_paid_usd", 0.0)) for row in fractional_snapshots),
+        "liquidations": sum(int(row.get("liquidations", 0)) for row in fractional_snapshots),
+        "rejected_min_size_total": sum(int(row.get("rejected_min_size", 0)) for row in fractional_snapshots),
+        "accounts": len(fractional_snapshots),
+        "fills_this_run": sum(
+            event.get("status") in ("buy", "sell", "open", "close", "liquidation")
+            for event in fractional_events
+        ),
+        "real_orders": False,
+    }])
+    fractional_summary.to_csv(REPORTS / "paper_fractional_portfolio_summary.csv", index=False)
     print(
         f"Paper engine: {len(snapshots)} accounts scanned; "
         f"{sum(event.get('status') in ('buy', 'sell', 'open', 'close', 'liquidation') for event in events)} fills/events; "

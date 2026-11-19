@@ -9,7 +9,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - Long/flat historical backtest with configurable fees, slippage and half-spread per fill, buy-and-hold benchmark, drawdown, annualized rough Sharpe, bar-level profit factor and win rate.
 - Rolling chronological out-of-sample test windows for fixed causal signals, plus an aggregated ranking by median fold return and positive-fold share; these are evaluation folds, not parameter optimization.
 - Isolated-margin futures backtests for Kraken linear PF perpetuals using observed historical relative funding rates and mark-price candles; results are written separately from spot/FX reports.
-- Stateful virtual spot accounts for crypto and FX proxy datasets, plus persistent isolated-margin futures accounts: buys/sells, wallet, margin, quantity, equity, realized/unrealized PnL, funding and liquidations. Position sizing is capped by a configurable fraction of available cash, and crypto orders below venue minimums are rejected and counted.
+- Two separate virtual execution views: venue-constrained accounts reject orders below exchange minimums; a clearly labeled fractional shadow portfolio ignores lot minimums to study signal behavior at tiny balances and is explicitly non-executable. Both track spot/futures positions, wallet, margin, quantity, equity, realized/unrealized PnL, fees, funding and liquidations.
 - Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
 - GitHub Actions runs tests and research on pushes to main and hourly (UTC). The paper summary tracks a 72-hour baseline experiment window and its elapsed/remaining time; paper executions stop automatically at the end of the window.
 
@@ -45,7 +45,8 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 - `reports/futures_walk_forward_ranking.csv` — aggregated futures fold ranking.
 - `reports/statistical_validation.csv` — block-bootstrap return intervals and Holm-adjusted p-values across the tested strategy set.
 - `reports/paper_portfolio_latest.csv` — virtual account balances and mark-to-market snapshots.
-- `reports/paper_portfolio_summary.csv` — active/inactive capital and total virtual performance.
+- `reports/paper_portfolio_summary.csv` — venue-constrained active/inactive capital, rejected orders and total virtual equity.
+- `reports/paper_fractional_portfolio_latest.csv` and `reports/paper_fractional_portfolio_summary.csv` — non-executable fractional shadow balances and performance.
 - `reports/paper_events_latest.csv` — latest virtual fills and position events.
 
 

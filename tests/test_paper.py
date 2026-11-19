@@ -4,7 +4,7 @@ import pytest
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 from quantlab.paper.runner import (
     _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
-    _portfolio_target_metrics,
+    _portfolio_target_metrics, _run_fractional_shadow,
 )
 
 
@@ -159,3 +159,52 @@ def test_portfolio_target_progress_includes_inactive_cash():
     assert metrics["total_return_pct"] == pytest.approx(0)
     assert metrics["target_progress_pct"] == pytest.approx(1)
     assert metrics["target_required_hourly_return_pct"] > 0
+
+
+def test_fractional_shadow_can_trade_below_venue_minimums(tmp_path):
+    path = tmp_path / "crypto_BTC_USD_1h.csv"
+    times = pd.date_range("2026-01-01", periods=80, freq="h", tz="UTC")
+    close = [100.0 + i for i in range(80)]
+    frame = pd.DataFrame({
+        "timestamp": times,
+        "open": [value - 0.2 for value in close],
+        "high": [value + 0.5 for value in close],
+        "low": [value - 0.5 for value in close],
+        "close": close,
+        "volume": [1000.0] * 80,
+        "min_order_size": [0.1] * 80,
+        "min_notional_usd": [100.0] * 80,
+    })
+    frame.to_csv(path, index=False)
+    cfg = {
+        "data": {
+            "crypto": {"timeframe": "1h"},
+            "forex": {"interval": "1d"},
+            "futures": {"timeframe": "1h"},
+        },
+        "capital": {"portfolios": {"crypto_spot": 25.0}},
+        "paper": {"max_position_fraction": 0.25},
+        "costs": {
+            "crypto_fee_rate": 0.0,
+            "forex_fee_rate": 0.0,
+            "slippage_rate": 0.0,
+            "crypto_spread_rate": 0.0,
+            "forex_spread_rate": 0.0,
+        },
+    }
+    accounts = {}
+    events, snapshots = _run_fractional_shadow(
+        cfg,
+        [path],
+        {"crypto_spot": 1},
+        accounts,
+        {"status": "RUNNING"},
+        usd_rub_rate=80.0,
+        now=pd.Timestamp("2026-01-05T00:00:00Z").to_pydatetime(),
+    )
+    assert events[0]["status"] == "buy"
+    assert snapshots[0]["venue_minimums_ignored"] is True
+    assert snapshots[0]["minimum_order_quantity"] == 0.1
+    assert snapshots[0]["required_account_capital_rub_for_minimum_order"] > 25
+    assert accounts[path.stem]["quantity"] > 0
+
