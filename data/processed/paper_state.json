@@ -26,7 +26,8 @@
         }
       ],
       "initial_capital_rub": 8.333333333333334,
-      "rejected_min_size": 1
+      "rejected_min_size": 1,
+      "fees_paid": 0.0
     },
     "crypto_ETH_USD_1h": {
       "initial_cash": 0.1015672941906223,
@@ -52,7 +53,8 @@
         }
       ],
       "initial_capital_rub": 8.333333333333334,
-      "rejected_min_size": 1
+      "rejected_min_size": 1,
+      "fees_paid": 0.0
     },
     "crypto_SOL_USD_1h": {
       "initial_cash": 0.1015672941906223,
@@ -78,7 +80,8 @@
         }
       ],
       "initial_capital_rub": 8.333333333333334,
-      "rejected_min_size": 1
+      "rejected_min_size": 1,
+      "fees_paid": 0.0
     },
     "forex_EURUSD=X_1d": {
       "initial_cash": 0.15235094128593343,
@@ -100,7 +103,8 @@
         }
       ],
       "initial_capital_rub": 12.5,
-      "rejected_min_size": 0
+      "rejected_min_size": 0,
+      "fees_paid": 0.0
     },
     "forex_GBPUSD=X_1d": {
       "initial_cash": 0.15235094128593343,
@@ -122,7 +126,8 @@
         }
       ],
       "initial_capital_rub": 12.5,
-      "rejected_min_size": 0
+      "rejected_min_size": 0,
+      "fees_paid": 0.0
     },
     "futures_PF_ETHUSD_1h": {
       "initial_cash": 0.1015672941906223,
@@ -222,6 +227,6 @@
   "quote_currency": "USD",
   "usd_rub_rate": 82.04740905761719,
   "usd_rub_timestamp_utc": "2026-11-18T00:00:00+00:00",
-  "updated_at": "2026-11-19T13:36:58.485311+00:00",
+  "updated_at": "2026-11-19T13:38:51.528990+00:00",
   "experiment_id": "quantlab-100-paper-72h-v1"
 }
