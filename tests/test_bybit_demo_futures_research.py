@@ -48,6 +48,8 @@ def test_research_backtests_isolated_bybit_datasets_without_live_orders(tmp_path
     )
     assert report["status"] == "BACKTEST_COMPLETED_RESEARCH_ONLY"
     assert report["backtest_rows"] == 1
+    assert report["long_short_backtest_rows"] == 1
+    assert report["long_short_walk_forward_folds"] >= 1
     assert report["demo_orders_submitted"] == 0
     assert report["real_orders_submitted"] == 0
     assert report["paper_engine_integration"] is False
@@ -55,3 +57,5 @@ def test_research_backtests_isolated_bybit_datasets_without_live_orders(tmp_path
     assert len(report["walk_forward_ranking"]) >= 1
     assert (report_dir / "bybit_demo_futures_backtest_summary.csv").exists()
     assert (report_dir / "bybit_demo_futures_walk_forward.csv").exists()
+    assert (report_dir / "bybit_demo_futures_long_short_summary.csv").exists()
+    assert (report_dir / "bybit_demo_futures_long_short_walk_forward.csv").exists()
