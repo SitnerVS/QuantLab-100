@@ -14,7 +14,7 @@ INTERVAL_MINUTES = {
 }
 
 
-def _completed_bars(frame, timestamp_column, timeframe):
+def _completed_bars(frame, timestamp_column, timeframe, now=None):
     """Remove the still-forming last candle and normalize chronological order."""
     minutes = INTERVAL_MINUTES.get(timeframe)
     if minutes is None:
@@ -23,7 +23,7 @@ def _completed_bars(frame, timestamp_column, timeframe):
     parsed = pd.to_datetime(result[timestamp_column], utc=True, errors="coerce")
     result = result.loc[parsed.notna()].copy()
     result["_timestamp_utc"] = parsed.loc[parsed.notna()]
-    now = datetime.now(timezone.utc)
+    now = now or datetime.now(timezone.utc)
     duration = timedelta(minutes=minutes)
     result = result.loc[result["_timestamp_utc"] + duration <= now]
     result = result.sort_values("_timestamp_utc").drop_duplicates("_timestamp_utc", keep="last")
