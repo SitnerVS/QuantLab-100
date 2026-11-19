@@ -156,6 +156,31 @@ def run_bybit_demo_futures_backtests(
     walk_forward_path = report_dir / "bybit_demo_futures_walk_forward.csv"
     summary.to_csv(summary_path, index=False)
     walk_forward.to_csv(walk_forward_path, index=False)
+    if not walk_forward.empty:
+        ranking_frame = (
+            walk_forward.groupby(["symbol", "strategy"], as_index=False)
+            .agg(
+                folds=("fold", "count"),
+                median_test_return_pct=("test_return_pct", "median"),
+                mean_test_return_pct=("test_return_pct", "mean"),
+                positive_fold_pct=("test_return_pct", lambda values: float((values > 0).mean() * 100.0)),
+                median_test_max_drawdown_pct=("test_max_drawdown_pct", "median"),
+                median_test_sharpe_annualized=("test_sharpe_annualized", "median"),
+                total_test_liquidations=("test_liquidations", "sum"),
+            )
+            .sort_values(["symbol", "median_test_return_pct"], ascending=[True, False])
+        )
+        walk_forward_ranking = ranking_frame.to_dict(orient="records")
+    else:
+        walk_forward_ranking = []
+
+    strategy_results = summary[[
+        "symbol", "strategy", "total_return_pct", "max_drawdown_pct",
+        "closed_trades", "liquidations", "rejected_min_size",
+        "rejected_min_notional", "funding_paid_quote", "fees_quote",
+        "final_equity_usdt", "buy_hold_return_pct", "excess_return_pct",
+    ]].to_dict(orient="records")
+
     report = {
         "status": "BACKTEST_COMPLETED_RESEARCH_ONLY",
         "exchange": "Bybit",
@@ -169,6 +194,8 @@ def run_bybit_demo_futures_backtests(
         "backtest_rows": len(summary_rows),
         "walk_forward_folds": len(walk_forward_rows),
         "datasets": dataset_checks,
+        "strategy_results": strategy_results,
+        "walk_forward_ranking": walk_forward_ranking,
         "outputs": [str(summary_path), str(walk_forward_path)],
         "demo_orders_submitted": 0,
         "real_orders_submitted": 0,
