@@ -12,3 +12,4 @@ data/processed/*
 reports/*
 !reports/.gitkeep
 !reports/*.csv
+!reports/*.md
