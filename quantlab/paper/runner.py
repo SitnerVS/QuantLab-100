@@ -186,6 +186,7 @@ def run_paper(cfg):
     state["schema_version"] = 6
     state.setdefault("experiment_id", "quantlab-100-paper-72h-v1")
     state.setdefault("accounts", {})
+    experiment = _experiment_window(state["created_at"], now, duration_hours=72)
     state["unsupported_sleeves"] = {
         "forex_leveraged_sim": "disabled_until_broker_grade_FX_margin_and_rollover_data_exists"
     }
@@ -240,6 +241,8 @@ def run_paper(cfg):
             key = path.stem
             account = state["accounts"].get(key)
             if account is None:
+                if experiment["status"] == "COMPLETED":
+                    continue
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
                 allocation_rub = sleeve_capital / max(1, counts[sleeve])
                 allocation_usd = rub_to_usd(allocation_rub, usd_rub_rate)
@@ -255,37 +258,43 @@ def run_paper(cfg):
             ).isoformat()
 
             if sleeve == "crypto_futures_sim":
-                futures_cfg = cfg["futures"]
-                account, event = apply_isolated_futures_signal(
-                    account,
-                    signal,
-                    float(latest["close"]),
-                    float(latest["funding_rate"]),
-                    bar_time,
-                    leverage=float(futures_cfg["leverage"]),
-                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-                    fee_rate=float(futures_cfg["fee_rate"]),
-                    slippage_rate=float(futures_cfg["slippage_rate"]),
-                    spread_rate=float(futures_cfg["spread_rate"]),
-                    maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
-                    liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
-                )
+                if experiment["status"] == "COMPLETED":
+                    event = {"timestamp": bar_time, "status": "experiment_completed"}
+                else:
+                    futures_cfg = cfg["futures"]
+                    account, event = apply_isolated_futures_signal(
+                        account,
+                        signal,
+                        float(latest["close"]),
+                        float(latest["funding_rate"]),
+                        bar_time,
+                        leverage=float(futures_cfg["leverage"]),
+                        max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                        fee_rate=float(futures_cfg["fee_rate"]),
+                        slippage_rate=float(futures_cfg["slippage_rate"]),
+                        spread_rate=float(futures_cfg["spread_rate"]),
+                        maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                        liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                    )
                 snapshot = _snapshot_futures(
                     account, latest, sleeve, key, bar_time,
                     float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
                 )
             else:
-                costs = cfg["costs"]
-                account, event = apply_paper_signal(
-                    account,
-                    signal,
-                    float(latest["close"]),
-                    bar_time,
-                    fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
-                    slippage_rate=float(costs["slippage_rate"]),
-                    spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
-                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-                )
+                if experiment["status"] == "COMPLETED":
+                    event = {"timestamp": bar_time, "status": "experiment_completed"}
+                else:
+                    costs = cfg["costs"]
+                    account, event = apply_paper_signal(
+                        account,
+                        signal,
+                        float(latest["close"]),
+                        bar_time,
+                        fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
+                        slippage_rate=float(costs["slippage_rate"]),
+                        spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
+                        max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                    )
                 snapshot = _snapshot_spot(
                     account, latest, sleeve, key, bar_time,
                     float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
@@ -305,7 +314,6 @@ def run_paper(cfg):
     active_initial_rub = sum(row["initial_capital_rub"] for row in snapshots)
     total_equity_rub = sum(row["equity_rub_estimate"] for row in snapshots)
     total_capital_rub = float(cfg["capital"]["total_rub"])
-    experiment = _experiment_window(state["created_at"], now, duration_hours=72)
     summary = pd.DataFrame([{
         "timestamp_utc": now.isoformat(),
         "experiment_id": state["experiment_id"],
