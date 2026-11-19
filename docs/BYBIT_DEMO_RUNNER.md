@@ -1,30 +1,110 @@
-# Bybit Demo: self-hosted runner setup
+# Подключение Mac к GitHub Actions для проверки Bybit Demo
 
-## Why this runner is required
+## Зачем это нужно
 
-Bybit's official V5 integration guide states that API requests from IP addresses located in the United States or Mainland China receive HTTP 403. GitHub-hosted runners can egress from restricted US IP space. The Bybit Demo check therefore runs only on a self-hosted macOS runner using the account owner's own network. No proxy or geolocation workaround is used.
+Обычный GitHub Actions runner выполнял запросы к Bybit с IP-адреса, который биржа отклонила с HTTP 403. Поэтому проверку Bybit вынесли в отдельный workflow, который запускается на собственном Mac через GitHub Actions Runner.
 
-## Security design
+Это не обход региональных ограничений. Если Bybit не разрешает API-доступ для вашего аккаунта или сети, подключение не сработает — в таком случае нужно обратиться в поддержку Bybit и не использовать VPN или прокси для обхода ограничений.
 
-- The workflow is manual-only (workflow_dispatch); it is not triggered by pull requests or pushes.
-- It checks wallet balance and open linear positions only.
-- It does not create, amend, or cancel orders.
-- It uses GitHub repository secrets BYBIT_DEMO_API_KEY and BYBIT_DEMO_API_SECRET.
-- The runner label must include self-hosted, macOS, and quantlab-bybit-demo.
-- Do not run untrusted repository code on this machine. Keep the runner dedicated to this repository and stop it when not in use.
+## Что будет делать подключение
 
-## One-time machine setup
+Отдельный workflow **Bybit Demo connection (self-hosted EU runner)**:
 
-1. Open repository Settings -> Actions -> Runners -> New self-hosted runner.
-2. Select macOS and follow GitHub's displayed download/configuration commands on the Mac that will host the runner.
-3. During configuration, add the custom label quantlab-bybit-demo.
-4. Start the runner using the GitHub-provided command.
-5. In Actions, select Bybit Demo connection (self-hosted EU runner) and run workflow manually.
+- запускается вручную;
+- использует секреты GitHub `BYBIT_DEMO_API_KEY` и `BYBIT_DEMO_API_SECRET`;
+- подключается только к Bybit Demo;
+- читает виртуальный баланс и открытые линейные позиции;
+- не создаёт, не изменяет и не отменяет ордера;
+- сохраняет диагностический отчёт в артефакты запуска.
 
-GitHub generates a short-lived registration token and displays the exact commands. Never publish that token or the runner's .credentials files.
+Основной исследовательский workflow QuantLab-100 продолжает работать на GitHub-hosted runner. Установка собственного runner нужна только для отдельной проверки Bybit.
 
-## Expected result
+## Важные меры безопасности
 
-A successful run uploads bybit-demo-connection-<run> with reports/bybit_demo_connection.json showing environment DEMO, authenticated true, and orders_submitted 0.
+- Используйте только свой личный Mac и собственную сеть, если доступ к Bybit из неё разрешён.
+- Не публикуйте API Key, API Secret, регистрационный токен GitHub или содержимое файлов учётных данных runner.
+- Не включайте права на вывод средств и переводы для API-ключа.
+- Не запускайте на этом runner код из неизвестных репозиториев или непроверенных веток.
+- Не отключайте защиту macOS и не устанавливайте неизвестные программы.
+- Если Mac общий или им пользуются другие люди, не регистрируйте на нём runner с доступом к секретам.
 
-If Bybit still rejects the request, stop here and investigate account-region eligibility with Bybit support. Do not use a VPN or proxy to evade regional restrictions.
+## Шаг 1. Откройте настройки Runner в GitHub
+
+1. Войдите в GitHub под своей учётной записью.
+2. Откройте репозиторий: https://github.com/SitnerVS/QuantLab-100
+3. Нажмите вкладку **Settings**.
+4. В левом меню найдите раздел **Actions**.
+5. Откройте **Runners**.
+6. Нажмите **New self-hosted runner**.
+
+Можно сразу открыть страницу: https://github.com/SitnerVS/QuantLab-100/settings/actions/runners
+
+## Шаг 2. Выберите операционную систему
+
+1. В блоке выбора операционной системы нажмите **macOS**.
+2. Выберите архитектуру, соответствующую вашему Mac:
+   - **ARM64** — Mac с процессором Apple M1, M2, M3, M4 и новее;
+   - **x64** — Mac с процессором Intel.
+3. GitHub покажет команды для скачивания и настройки runner. Не используйте команды из сторонних источников.
+
+## Шаг 3. Установите runner
+
+1. Откройте на Mac приложение **Terminal**. Его можно найти через Spotlight: нажмите `Command + Space`, введите `Terminal` и нажмите Enter.
+2. На странице GitHub скопируйте первую команду из раздела **Download** и вставьте её в Terminal. Нажмите Enter и дождитесь завершения.
+3. Выполните следующую команду из раздела **Configure** — она распакует и настроит runner. GitHub может показать команду с временным регистрационным токеном.
+4. При настройке отвечайте на вопросы:
+   - **Enter the name of the runner group** — нажмите Enter, чтобы оставить значение по умолчанию;
+   - **Enter the name of runner** — можно указать `quantlab-mac`;
+   - **Enter any additional labels** — обязательно добавьте метку `quantlab-bybit-demo`;
+   - остальные необязательные параметры можно оставить по умолчанию.
+5. Когда настройка завершится, запустите runner командой из раздела **Run** на странице GitHub.
+
+Не присылайте никому регистрационный токен. Он временный, но позволяет зарегистрировать runner. Не публикуйте каталог runner и файлы `.credentials`.
+
+## Шаг 4. Убедитесь, что Mac подключён
+
+Вернитесь в GitHub: https://github.com/SitnerVS/QuantLab-100/settings/actions/runners
+
+В списке должен появиться runner с именем, которое вы указали. Его статус должен быть **Idle** (ожидает задания) или **Online**.
+
+Если runner не появился:
+- проверьте, что команда настройки завершилась без ошибок;
+- убедитесь, что добавлена метка `quantlab-bybit-demo`;
+- проверьте, что процесс runner запущен в Terminal и окно Terminal не закрыто.
+
+Пока runner работает в Terminal, Mac должен оставаться включённым и подключённым к интернету.
+
+## Шаг 5. Запустите проверку Bybit Demo
+
+1. Откройте вкладку **Actions** репозитория: https://github.com/SitnerVS/QuantLab-100/actions
+2. В списке workflow слева выберите **Bybit Demo connection (self-hosted EU runner)**.
+3. Нажмите **Run workflow**.
+4. Выберите ветку `main` и подтвердите запуск кнопкой **Run workflow**.
+5. Откройте появившийся запуск и дождитесь завершения.
+
+Если всё прошло успешно, в запуске появится артефакт с названием вида `bybit-demo-connection-номер`. Внутри будет файл `bybit_demo_connection.json`.
+
+Ожидаемые значения в отчёте:
+
+- `"environment": "DEMO"`
+- `"authenticated": true`
+- `"status": "CONNECTED"`
+- `"orders_submitted": 0`
+- `"real_trading_enabled": false`
+
+## Если проверка завершилась ошибкой
+
+- **HTTP 403 / IP restriction** — Bybit отклоняет IP или регион. Не пытайтесь обходить ограничение VPN или прокси; уточните допустимость API-доступа у поддержки Bybit.
+- **Invalid API key / signature** — проверьте, что в GitHub Secrets сохранены именно Demo API Key и Demo API Secret, без пробелов и лишних символов.
+- **Permission denied** — проверьте, что ключу разрешено чтение баланса и позиций.
+- **Runner не найден / job ожидает** — проверьте, что Mac включён, runner запущен и у него есть метка `quantlab-bybit-demo`.
+
+Никогда не вставляйте API Key или API Secret в журнал GitHub Actions, исходный код, сообщения или скриншоты.
+
+## Как остановить runner
+
+Чтобы временно остановить runner, вернитесь в окно Terminal, где он запущен, и нажмите `Control + C`. Пока runner остановлен, задания, назначенные на него, выполняться не будут. Для следующего запуска снова выполните команду запуска из инструкции GitHub.
+
+## Что будет дальше
+
+На первом этапе мы подтверждаем только безопасное чтение данных из Bybit Demo. Выставление виртуальных ордеров будет отдельным этапом разработки и тестирования. До завершения этих проверок никакие ордера не отправляются.
