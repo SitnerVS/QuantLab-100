@@ -2,7 +2,7 @@ name: Bybit Demo connection (self-hosted EU runner)
 
 on:
   workflow_dispatch:
-  # One-time validation path: run automatically when this workflow file changes.
+  # Run automatically when this workflow file changes, to validate runner fixes.
   push:
     branches: [main]
     paths:
@@ -19,11 +19,6 @@ jobs:
   bybit-demo-read-only:
     runs-on: [self-hosted, macOS, quantlab-bybit-demo]
     timeout-minutes: 10
-    # The local Mac runner inherited a hosted-runner tool-cache path
-    # (/Users/runner), which is not writable on this machine.
-    # Keep setup-python's cache inside this runner's temporary directory.
-    env:
-      RUNNER_TOOL_CACHE: ${{ runner.temp }}/_tool
     steps:
       - name: Checkout trusted main branch
         uses: actions/checkout@v4
@@ -32,6 +27,9 @@ jobs:
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
+        env:
+          # Override the hosted-runner default with a writable local cache.
+          RUNNER_TOOL_CACHE: ${{ runner.temp }}/_tool
         with:
           python-version: "3.11"
       - name: Install project dependencies
