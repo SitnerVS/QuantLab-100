@@ -14,6 +14,21 @@ INTERVAL_MINUTES = {
 }
 
 
+def _retry(label, operation, attempts=3, base_delay=1.0):
+    """Retry transient public-data requests with bounded exponential backoff."""
+    if int(attempts) < 1 or float(base_delay) < 0:
+        raise ValueError("attempts must be positive and base_delay non-negative")
+    for attempt in range(1, int(attempts) + 1):
+        try:
+            return operation()
+        except Exception as exc:
+            if attempt >= int(attempts):
+                raise
+            delay = float(base_delay) * (2 ** (attempt - 1))
+            print(f"[data] {label} failed ({attempt}/{attempts}): {exc}; retrying in {delay:.1f}s")
+            time.sleep(delay)
+
+
 def _completed_bars(frame, timestamp_column, timeframe, now=None):
     """Remove the still-forming last candle and normalize chronological order."""
     minutes = INTERVAL_MINUTES.get(timeframe)
@@ -64,7 +79,7 @@ def download_crypto(cfg):
     exchange_name = section.get("exchange", "kraken")
     exchange_cls = getattr(ccxt, exchange_name)
     exchange = exchange_cls({"enableRateLimit": True})
-    exchange.load_markets()
+    _retry(f"{exchange_name} load markets", exchange.load_markets)
     RAW.mkdir(parents=True, exist_ok=True)
 
     for symbol in section["symbols"]:
@@ -79,10 +94,13 @@ def download_crypto(cfg):
             min_notional = cost_limits.get("min") or info.get("costmin") or 0.0
             if min_order_size is None or float(min_order_size) <= 0:
                 raise RuntimeError(f"minimum order quantity is unavailable for {symbol}")
-            rows = exchange.fetch_ohlcv(
-                symbol,
-                timeframe=section["timeframe"],
-                limit=int(section["limit"]),
+            rows = _retry(
+                f"{symbol} OHLCV",
+                lambda: exchange.fetch_ohlcv(
+                    symbol,
+                    timeframe=section["timeframe"],
+                    limit=int(section["limit"]),
+                ),
             )
             frame = pd.DataFrame(
                 rows,
@@ -111,12 +129,15 @@ def download_forex(cfg):
 
     for symbol in section["symbols"]:
         try:
-            frame = yf.download(
-                symbol,
-                period=section["period"],
-                interval=section["interval"],
-                auto_adjust=False,
-                progress=False,
+            frame = _retry(
+                f"{symbol} Yahoo Finance",
+                lambda: yf.download(
+                    symbol,
+                    period=section["period"],
+                    interval=section["interval"],
+                    auto_adjust=False,
+                    progress=False,
+                ),
             )
             if frame.empty:
                 raise RuntimeError("source returned no rows")
@@ -145,7 +166,7 @@ def download_futures(cfg):
         return
 
     exchange = ccxt.krakenfutures({"enableRateLimit": True})
-    markets = exchange.load_markets()
+    markets = _retry("Kraken Futures load markets", exchange.load_markets)
     RAW.mkdir(parents=True, exist_ok=True)
 
     for instrument in symbols:
@@ -159,11 +180,14 @@ def download_futures(cfg):
                 minimum = market.get("limits", {}).get("amount", {}).get("min")
             if minimum is None or float(minimum) <= 0:
                 raise RuntimeError(f"minimum contract quantity is unavailable for {instrument}")
-            candles = exchange.fetch_ohlcv(
-                symbol,
-                timeframe=section.get("timeframe", "1h"),
-                limit=int(section.get("limit", 720)),
-                params={"price": "mark"},
+            candles = _retry(
+                f"{instrument} mark OHLCV",
+                lambda: exchange.fetch_ohlcv(
+                    symbol,
+                    timeframe=section.get("timeframe", "1h"),
+                    limit=int(section.get("limit", 720)),
+                    params={"price": "mark"},
+                ),
             )
             frame = pd.DataFrame(
                 candles,
@@ -172,7 +196,10 @@ def download_futures(cfg):
             frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
             frame = _completed_bars(frame, "timestamp", section.get("timeframe", "1h"))
 
-            response = exchange.publicGetHistoricalfundingrates({"symbol": instrument})
+            response = _retry(
+                f"{instrument} historical funding",
+                lambda: exchange.publicGetHistoricalfundingrates({"symbol": instrument}),
+            )
             rates = response.get("rates", [])
             if response.get("result") != "success" or not rates:
                 raise RuntimeError("historical funding endpoint returned no rates")
