@@ -251,6 +251,8 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
         "minimum_lot_blocked_capital_rub": 50,
         "fills_this_run": 0,
         "rejected_orders_this_run": 6,
+        "open_positions": 0,
+        "closed_trades": 0,
     }])
     fractional = pd.DataFrame([{
         "total_equity_rub_estimate": 99.9,
@@ -260,6 +262,8 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
         "fees_paid_usd": 0.01,
         "funding_paid_usd": 0.001,
         "liquidations": 0,
+        "open_positions": 6,
+        "closed_trades": 0,
     }])
     _write_experiment_status_report(venue, fractional)
     report = (tmp_path / "experiment_status.md").read_text(encoding="utf-8")
@@ -267,6 +271,7 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
     assert "cannot be placed at the exchange" in report
     assert "bb_signal" in report
     assert "Holm-adjusted p-value" in report
+    assert "open positions: 6" in report
 
 
 

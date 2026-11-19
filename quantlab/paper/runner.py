@@ -649,6 +649,9 @@ def run_paper(cfg):
         "liquidations": sum(int(row.get("liquidations", 0)) for row in snapshots),
         "rejected_min_size_total": sum(int(row.get("rejected_min_size", 0)) for row in snapshots),
         "accounts": len(snapshots),
+        "open_positions": sum(float(row.get("quantity", 0.0)) > 0 for row in snapshots),
+        "cumulative_trade_count": sum(int(row.get("trade_count", 0)) for row in snapshots),
+        "closed_trades": sum(int(row.get("closed_trades", 0)) for row in snapshots),
         "fills_this_run": sum(
             event.get("status") in ("buy", "sell", "open", "close", "liquidation")
             for event in events
@@ -718,6 +721,9 @@ def run_paper(cfg):
         "liquidations": sum(int(row.get("liquidations", 0)) for row in fractional_snapshots),
         "rejected_min_size_total": sum(int(row.get("rejected_min_size", 0)) for row in fractional_snapshots),
         "accounts": len(fractional_snapshots),
+        "open_positions": sum(float(row.get("quantity", 0.0)) > 0 for row in fractional_snapshots),
+        "cumulative_trade_count": sum(int(row.get("trade_count", 0)) for row in fractional_snapshots),
+        "closed_trades": sum(int(row.get("closed_trades", 0)) for row in fractional_snapshots),
         "fills_this_run": sum(
             event.get("status") in ("buy", "sell", "open", "close", "liquidation")
             for event in fractional_events
