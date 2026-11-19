@@ -31,6 +31,7 @@ def run_backtests(cfg):
             is_crypto = path.name.startswith("crypto_")
             fee = float(cfg["costs"]["crypto_fee_rate"] if is_crypto else cfg["costs"]["forex_fee_rate"])
             periods_per_year = 24 * 365 if is_crypto else 252
+            spread = float(cfg["costs"].get("crypto_spread_rate" if is_crypto else "forex_spread_rate", 0.0))
             for strategy in ("ema_signal", "rsi_signal", "bb_signal", "donchian_signal"):
                 _, metrics = simulate(
                     enriched,
@@ -39,6 +40,7 @@ def run_backtests(cfg):
                     slippage_rate=float(cfg["costs"]["slippage_rate"]),
                     initial_cash=float(cfg["backtest"]["initial_cash"]),
                     periods_per_year=periods_per_year,
+                    spread_rate=spread,
                 )
                 rows.append({"dataset": path.name, "strategy": strategy, **metrics})
 
@@ -52,6 +54,7 @@ def run_backtests(cfg):
                     slippage_rate=float(cfg["costs"]["slippage_rate"]),
                     initial_cash=float(cfg["backtest"]["initial_cash"]),
                     periods_per_year=periods_per_year,
+                    spread_rate=spread,
                 )
                 for fold_metrics in folds:
                     walk_forward_rows.append({
