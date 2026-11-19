@@ -33,7 +33,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
             "dataset": path.name, "market_type": market_type, "status": "MISSING",
             "rows": 0, "duplicate_timestamps": None, "missing_ohlcv_rows": None,
             "missing_volume_rows": None, "missing_funding_rows": None,
-            "invalid_ohlc_rows": None, "max_gap_hours": None,
+            "invalid_ohlc_rows": None, "min_order_size": None, "min_notional_usd": None, "max_gap_hours": None,
             "last_bar_age_hours": None, "first_bar_utc": None, "last_bar_utc": None,
         }
 
@@ -50,7 +50,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
             "dataset": path.name, "market_type": market_type, "status": "INVALID_SCHEMA",
             "rows": int(len(frame)), "duplicate_timestamps": None, "missing_ohlcv_rows": None,
             "missing_volume_rows": None, "missing_funding_rows": None,
-            "invalid_ohlc_rows": None, "max_gap_hours": None,
+            "invalid_ohlc_rows": None, "min_order_size": None, "min_notional_usd": None, "max_gap_hours": None,
             "last_bar_age_hours": None, "first_bar_utc": None, "last_bar_utc": None,
         }
 
@@ -60,6 +60,16 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     missing = int(frame[required_columns].isna().any(axis=1).sum())
     missing_volume = int(frame["volume"].isna().sum()) if "volume" in frame.columns else int(len(frame))
     missing_funding = int(frame["funding_rate"].isna().sum()) if market_type == "futures" else 0
+    min_order_size_value = (
+        float(pd.to_numeric(frame["min_order_size"], errors="coerce").dropna().iloc[-1])
+        if "min_order_size" in frame.columns and pd.to_numeric(frame["min_order_size"], errors="coerce").notna().any()
+        else None
+    )
+    min_notional_value = (
+        float(pd.to_numeric(frame["min_notional_usd"], errors="coerce").dropna().iloc[-1])
+        if "min_notional_usd" in frame.columns and pd.to_numeric(frame["min_notional_usd"], errors="coerce").notna().any()
+        else None
+    )
 
     numeric = frame[["open", "high", "low", "close"]].apply(pd.to_numeric, errors="coerce")
     invalid = (
@@ -113,6 +123,8 @@ def analyze_dataset(path, timeframe, market_type, now=None):
         "missing_volume_rows": missing_volume,
         "missing_funding_rows": missing_funding,
         "invalid_ohlc_rows": invalid_rows,
+        "min_order_size": min_order_size_value,
+        "min_notional_usd": min_notional_value,
         "max_gap_hours": max_gap,
         "last_bar_age_hours": age_hours,
         "first_bar_utc": valid_times.iloc[0].isoformat() if not valid_times.empty else None,
