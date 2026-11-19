@@ -45,8 +45,8 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 
 
 ## Roadmap
-1. Complete and validate the event-driven paper engine and its persistence (current implementation is initial spot-only version).
-2. Improve data validation, source health checks and instrument metadata.
-3. Add realistic futures funding, maintenance margin, mark-price and liquidation simulation before enabling leveraged sleeves.
-4. Add chronological train/validation/test splits, walk-forward testing, benchmark comparisons, confidence intervals and multiple-testing controls.
-5. Improve execution modelling with next-bar prices, spread sources, partial fills and venue constraints.
+1. Connect reliable historical and current funding-rate data to the isolated futures engine; only then consider enabling futures paper accounts.
+2. Add block-bootstrap confidence intervals and multiple-testing controls before promoting any strategy.
+3. Improve execution realism with next-open fills, venue-specific spread data, partial fills and exchange constraints.
+4. Extend paper-state recovery tests and run the spot-only paper system long enough to evaluate stability across changing market regimes.
+5. Evaluate additional signals and risk controls only through chronological out-of-sample folds; do not select strategies from in-sample rankings.
