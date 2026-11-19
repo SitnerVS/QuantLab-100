@@ -34,7 +34,7 @@ def apply_isolated_futures_signal(
     fee_rate=0.0006,
     slippage_rate=0.0005,
     spread_rate=0.0,
-    maintenance_margin_rate=0.005,
+    maintenance_margin_rate=0.05,
     liquidation_fee_rate=0.025,
     min_order_size=0.0,
 ):
@@ -178,7 +178,7 @@ def simulate_isolated_long(
     fee_rate=0.0006,
     slippage_rate=0.0005,
     spread_rate=0.0,
-    maintenance_margin_rate=0.005,
+    maintenance_margin_rate=0.05,
     liquidation_fee_rate=0.025,
 ):
     """Run the persistent isolated-margin step engine across historical bars."""
