@@ -292,6 +292,100 @@ def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rat
     return events, snapshots
 
 
+
+def _write_experiment_status_report(venue_summary, fractional_summary):
+    """Write a concise, human-readable view of execution and research status."""
+    venue = venue_summary.iloc[0].to_dict()
+    fractional = fractional_summary.iloc[0].to_dict()
+
+    def number(row, key, default=0.0):
+        value = row.get(key, default)
+        return float(value) if pd.notna(value) else float(default)
+
+    lines = [
+        "# QuantLab 100 — experiment status",
+        "",
+        f"Updated (UTC): {venue.get('timestamp_utc', 'unknown')}",
+        f"Experiment: {venue.get('experiment_id', 'unknown')} — {venue.get('experiment_status', 'unknown')}",
+        f"Window: {venue.get('experiment_start_utc', 'unknown')} → {venue.get('experiment_end_utc', 'unknown')}",
+        f"Elapsed: {number(venue, 'experiment_elapsed_hours'):.2f} h; remaining: {number(venue, 'experiment_remaining_hours'):.2f} h",
+        "",
+        "## Target",
+        "",
+        f"- Starting capital: {number(venue, 'total_initial_capital_rub'):.2f} RUB",
+        f"- Target equity: {number(venue, 'target_equity_rub'):.2f} RUB",
+        f"- Current venue-constrained equity: {number(venue, 'total_equity_rub_estimate'):.4f} RUB",
+        f"- Target progress: {number(venue, 'target_progress_pct'):.4f}%",
+        f"- Required compound return to reach the target in 72 hours: {number(venue, 'target_required_hourly_return_pct'):.4f}% per hour",
+        "",
+        "## Venue-constrained paper portfolio",
+        "",
+        f"- Equity: {number(venue, 'total_equity_rub_estimate'):.4f} RUB; total return: {number(venue, 'total_return_pct'):+.5f}%",
+        f"- Active capital: {number(venue, 'active_initial_capital_rub'):.2f} RUB; idle capital: {number(venue, 'inactive_capital_rub'):.2f} RUB",
+        f"- Capital blocked by venue minimum lots: {number(venue, 'minimum_lot_blocked_capital_rub'):.2f} RUB",
+        f"- Fills this run: {int(number(venue, 'fills_this_run'))}; rejected minimum-size orders: {int(number(venue, 'rejected_orders_this_run'))}",
+        "",
+        "## Fractional shadow portfolio — NON-EXECUTABLE",
+        "",
+        "This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.",
+        "",
+        f"- Equity: {number(fractional, 'total_equity_rub_estimate'):.4f} RUB; total return: {number(fractional, 'total_return_pct'):+.5f}%",
+        f"- Active return: {number(fractional, 'active_return_pct'):+.5f}%; fills this run: {int(number(fractional, 'fills_this_run'))}",
+        f"- Fees paid: {number(fractional, 'fees_paid_usd'):.8f} USD; funding paid (net sign as recorded): {number(fractional, 'funding_paid_usd'):.8f} USD",
+        f"- Liquidations: {int(number(fractional, 'liquidations'))}",
+        "",
+        "## Historical out-of-sample research",
+        "",
+        "The tables below are exploratory rankings of fixed strategy rules on chronological test folds. They are not forecasts and do not automatically activate a strategy.",
+    ]
+
+    for label, filename in (
+        ("Spot / FX proxy", "walk_forward_ranking.csv"),
+        ("Crypto futures", "futures_walk_forward_ranking.csv"),
+    ):
+        path = REPORTS / filename
+        if not path.exists():
+            continue
+        ranking = pd.read_csv(path)
+        if ranking.empty:
+            continue
+        top = ranking.sort_values("median_test_return_pct", ascending=False).head(3)
+        lines.extend([
+            "",
+            f"### {label}",
+            "",
+            "| Dataset | Strategy | Median OOS return | Positive folds | Folds |",
+            "|---|---|---:|---:|---:|",
+        ])
+        for _, row in top.iterrows():
+            lines.append(
+                f"| {row['dataset']} | {row['strategy']} | "
+                f"{float(row['median_test_return_pct']):+.4f}% | "
+                f"{float(row['positive_fold_pct']):.1f}% | {int(row['folds'])} |"
+            )
+
+    statistical_path = REPORTS / "statistical_validation.csv"
+    if statistical_path.exists():
+        statistical = pd.read_csv(statistical_path)
+        if not statistical.empty and "holm_adjusted_p_value" in statistical:
+            best_adjusted_p = float(statistical["holm_adjusted_p_value"].min())
+            lines.extend([
+                "",
+                f"Minimum Holm-adjusted p-value across tested dataset/strategy combinations: {best_adjusted_p:.4f}.",
+                "No tested strategy passes the 5% family-wise significance threshold."
+                if best_adjusted_p >= 0.05
+                else "At least one tested strategy passes the 5% family-wise significance threshold; it still requires independent validation.",
+            ])
+
+    lines.extend([
+        "",
+        "---",
+        "",
+        "Safety: paper mode only. Real order submission is disabled. No exchange credentials are used.",
+    ])
+    (REPORTS / "experiment_status.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _portfolio_target_metrics(
     active_equity_rub,
     inactive_capital_rub,
@@ -515,6 +609,9 @@ def run_paper(cfg):
         "experiment_remaining_hours": experiment["remaining_hours"],
         "experiment_status": experiment["status"],
         "target_equity_rub": target_equity_rub,
+        "total_initial_capital_rub": total_capital_rub,
+        "execution_mode": "venue_constrained",
+        "venue_minimums_ignored": False,
         **target_metrics,
         "base_currency": "RUB",
         "usd_rub_rate": usd_rub_rate,
@@ -584,6 +681,7 @@ def run_paper(cfg):
         "execution_warning": "Fractional orders ignore venue minimums and cannot be placed at the venue.",
         "venue_minimums_ignored": True,
         "target_equity_rub": target_equity_rub,
+        "total_initial_capital_rub": total_capital_rub,
         **fractional_target_metrics,
         "base_currency": "RUB",
         "usd_rub_rate": usd_rub_rate,
@@ -609,6 +707,7 @@ def run_paper(cfg):
         "real_orders": False,
     }])
     fractional_summary.to_csv(REPORTS / "paper_fractional_portfolio_summary.csv", index=False)
+    _write_experiment_status_report(summary, fractional_summary)
     print(
         f"Paper engine: {len(snapshots)} accounts scanned; "
         f"{sum(event.get('status') in ('buy', 'sell', 'open', 'close', 'liquidation') for event in events)} fills/events; "

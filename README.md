@@ -46,6 +46,7 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 - `reports/statistical_validation.csv` — block-bootstrap return intervals and Holm-adjusted p-values across the tested strategy set.
 - `reports/paper_portfolio_latest.csv` — virtual account balances and mark-to-market snapshots.
 - `reports/paper_portfolio_summary.csv` — venue-constrained active/inactive capital, rejected orders and total virtual equity.
+- `reports/experiment_status.md` — human-readable experiment status, fractional-shadow warning and out-of-sample research shortlist.
 - `reports/paper_fractional_portfolio_latest.csv` and `reports/paper_fractional_portfolio_summary.csv` — non-executable fractional shadow balances and performance.
 - `reports/paper_events_latest.csv` — latest virtual fills and position events.
 

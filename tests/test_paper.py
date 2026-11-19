@@ -5,6 +5,7 @@ from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 from quantlab.paper.runner import (
     _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
     _portfolio_target_metrics, _run_fractional_shadow,
+    _write_experiment_status_report,
 )
 
 
@@ -207,4 +208,63 @@ def test_fractional_shadow_can_trade_below_venue_minimums(tmp_path):
     assert snapshots[0]["minimum_order_quantity"] == 0.1
     assert snapshots[0]["required_account_capital_rub_for_minimum_order"] > 25
     assert accounts[path.stem]["quantity"] > 0
+
+
+
+def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path, monkeypatch):
+    import quantlab.paper.runner as paper_runner
+
+    monkeypatch.setattr(paper_runner, "REPORTS", tmp_path)
+    pd.DataFrame([{
+        "dataset": "forex_RUB=X_1d.csv",
+        "strategy": "bb_signal",
+        "folds": 6,
+        "median_test_return_pct": 1.9,
+        "positive_fold_pct": 66.7,
+    }]).to_csv(tmp_path / "walk_forward_ranking.csv", index=False)
+    pd.DataFrame([{
+        "dataset": "futures_PF_SOLUSD_1h.csv",
+        "strategy": "rsi_signal",
+        "folds": 9,
+        "median_test_return_pct": 0.4,
+        "positive_fold_pct": 55.6,
+    }]).to_csv(tmp_path / "futures_walk_forward_ranking.csv", index=False)
+    pd.DataFrame([{"holm_adjusted_p_value": 1.0}]).to_csv(
+        tmp_path / "statistical_validation.csv", index=False
+    )
+    venue = pd.DataFrame([{
+        "timestamp_utc": "2026-11-19T13:00:00Z",
+        "experiment_id": "test",
+        "experiment_status": "RUNNING",
+        "experiment_start_utc": "2026-11-19T12:00:00Z",
+        "experiment_end_utc": "2026-11-22T12:00:00Z",
+        "experiment_elapsed_hours": 1,
+        "experiment_remaining_hours": 71,
+        "target_equity_rub": 10000,
+        "total_initial_capital_rub": 100,
+        "total_equity_rub_estimate": 100,
+        "total_return_pct": 0,
+        "target_progress_pct": 1,
+        "target_required_hourly_return_pct": 6.605,
+        "active_initial_capital_rub": 75,
+        "inactive_capital_rub": 25,
+        "minimum_lot_blocked_capital_rub": 50,
+        "fills_this_run": 0,
+        "rejected_orders_this_run": 6,
+    }])
+    fractional = pd.DataFrame([{
+        "total_equity_rub_estimate": 99.9,
+        "total_return_pct": -0.1,
+        "active_return_pct": -0.13,
+        "fills_this_run": 6,
+        "fees_paid_usd": 0.01,
+        "funding_paid_usd": 0.001,
+        "liquidations": 0,
+    }])
+    _write_experiment_status_report(venue, fractional)
+    report = (tmp_path / "experiment_status.md").read_text(encoding="utf-8")
+    assert "NON-EXECUTABLE" in report
+    assert "cannot be placed at the exchange" in report
+    assert "bb_signal" in report
+    assert "Holm-adjusted p-value" in report
 
