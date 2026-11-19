@@ -9,9 +9,9 @@ class FakeMarketClient:
         assert kwargs == {"category": "linear", "symbol": "BTCUSDT", "interval": "60", "limit": 3}
         # Bybit returns newest first; the final candle is still forming at the fixed test time.
         return {"retCode": 0, "result": {"list": [
-            ["1767225600000", "110", "112", "109", "111", "12", "1332"],
-            ["1767222000000", "100", "111", "99", "110", "10", "1050"],
-            ["1767218400000", "95", "101", "94", "100", "8", "780"],
+            ["1767232800000", "110", "112", "109", "111", "12", "1332"],
+            ["1767229200000", "100", "111", "99", "110", "10", "1050"],
+            ["1767225600000", "95", "101", "94", "100", "8", "780"],
         ]}}
 
 
