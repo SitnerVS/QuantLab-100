@@ -1,4 +1,5 @@
 from pathlib import Path
+import zlib
 
 import pandas as pd
 
@@ -9,6 +10,7 @@ from quantlab.backtest.validation import (
     walk_forward_futures_evaluate,
 )
 from quantlab.futures.engine import simulate_isolated_long
+from quantlab.backtest.statistics import block_bootstrap_validation, holm_adjust
 from quantlab.strategies import build_signals
 
 RAW = Path("data/raw")
@@ -21,6 +23,7 @@ def run_backtests(cfg):
     spot_walk_forward_rows = []
     futures_rows = []
     futures_walk_forward_rows = []
+    statistical_rows = []
 
     quality_path = REPORTS / "data_quality.csv"
     quality = pd.read_csv(quality_path) if quality_path.exists() else pd.DataFrame()
@@ -67,6 +70,22 @@ def run_backtests(cfg):
                         liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
                     )
                     returns = result["equity"].pct_change().fillna(0.0)
+                    seed = zlib.crc32(f"{path.name}:{strategy}".encode("utf-8")) + 42
+                    bootstrap = block_bootstrap_validation(
+                        returns, block_size=24, n_bootstrap=500, seed=seed
+                    )
+                    metrics.update({
+                        "bootstrap_ci_lower_pct": bootstrap["bootstrap_ci_lower_pct"],
+                        "bootstrap_ci_upper_pct": bootstrap["bootstrap_ci_upper_pct"],
+                        "block_bootstrap_p_value": bootstrap["block_bootstrap_p_value"],
+                    })
+                    statistical_rows.append({
+                        "dataset": path.name,
+                        "market_type": "futures",
+                        "strategy": strategy,
+                        "block_size": 24,
+                        **bootstrap,
+                    })
                     std = returns.std(ddof=1)
                     metrics["sharpe_annualized_rough"] = (
                         float(returns.mean() / std * (8760 ** 0.5))
@@ -103,7 +122,7 @@ def run_backtests(cfg):
             slippage = float(cfg["costs"]["slippage_rate"])
 
             for strategy in ("ema_signal", "rsi_signal", "bb_signal", "donchian_signal"):
-                _, metrics = simulate(
+                result, metrics = simulate(
                     enriched,
                     strategy,
                     fee_rate=fee,
@@ -112,6 +131,24 @@ def run_backtests(cfg):
                     periods_per_year=periods_per_year,
                     spread_rate=spread,
                 )
+                seed = zlib.crc32(f"{path.name}:{strategy}".encode("utf-8")) + 42
+                block_size = 24 if is_crypto else 5
+                bootstrap = block_bootstrap_validation(
+                    result["strategy_return"], block_size=block_size,
+                    n_bootstrap=500, seed=seed,
+                )
+                metrics.update({
+                    "bootstrap_ci_lower_pct": bootstrap["bootstrap_ci_lower_pct"],
+                    "bootstrap_ci_upper_pct": bootstrap["bootstrap_ci_upper_pct"],
+                    "block_bootstrap_p_value": bootstrap["block_bootstrap_p_value"],
+                })
+                statistical_rows.append({
+                    "dataset": path.name,
+                    "market_type": "crypto_spot" if is_crypto else "forex_proxy",
+                    "strategy": strategy,
+                    "block_size": block_size,
+                    **bootstrap,
+                })
                 spot_rows.append({"dataset": path.name, "strategy": strategy, **metrics})
 
                 folds = walk_forward_evaluate(
@@ -140,6 +177,12 @@ def run_backtests(cfg):
 
     pd.DataFrame(futures_rows).to_csv(REPORTS / "futures_backtest_summary.csv", index=False)
     pd.DataFrame(futures_walk_forward_rows).to_csv(REPORTS / "futures_walk_forward_summary.csv", index=False)
+    statistical = pd.DataFrame(statistical_rows)
+    if not statistical.empty:
+        statistical["holm_adjusted_p_value"] = holm_adjust(
+            statistical["block_bootstrap_p_value"].tolist()
+        )
+    statistical.to_csv(REPORTS / "statistical_validation.csv", index=False)
     summarize_walk_forward(futures_walk_forward_rows).to_csv(
         REPORTS / "futures_walk_forward_ranking.csv", index=False
     )
