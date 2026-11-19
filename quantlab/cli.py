@@ -4,6 +4,7 @@ import yaml
 from quantlab.data.download import download_all
 from quantlab.backtest.runner import run_backtests
 from quantlab.paper.runner import run_paper
+from quantlab.data.quality import run_data_quality
 
 
 def load_config(path):
@@ -20,6 +21,8 @@ def main():
 
     if args.command in ("download", "run"):
         download_all(cfg)
+    if args.command in ("download", "backtest", "paper", "run"):
+        run_data_quality(cfg)
     if args.command in ("backtest", "run"):
         run_backtests(cfg)
     if args.command in ("paper", "run"):
