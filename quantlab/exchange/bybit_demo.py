@@ -12,7 +12,7 @@ def build_demo_session(api_key: str | None = None, api_secret: str | None = None
         raise RuntimeError("Missing BYBIT_DEMO_API_KEY or BYBIT_DEMO_API_SECRET GitHub Actions secret.")
     from pybit.unified_trading import HTTP
     return HTTP(testnet=False, demo=True, api_key=key, api_secret=secret)
-def build_public_market_session(domain: str = "bytick"):
+def build_public_market_session(domain: str = "bybit"):
     """Create an unauthenticated mainnet session for public market data only."""
     from pybit.unified_trading import HTTP
     return HTTP(testnet=False, demo=False, domain=domain)
