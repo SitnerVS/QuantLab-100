@@ -106,3 +106,18 @@ def test_72_hour_experiment_window_marks_completion():
     window = _experiment_window(start, now)
     assert window["status"] == "COMPLETED"
     assert window["remaining_hours"] == 0
+
+
+def test_spot_paper_account_rejects_below_minimum_notional():
+    account = new_account(100)
+    account, event = apply_paper_signal(
+        account, 1, 100, "bar-min",
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        max_position_fraction=0.25,
+        min_order_size=0.0001,
+        min_notional=50,
+    )
+    assert event["status"] == "below_minimum_size"
+    assert account["quantity"] == 0
+    assert account["cash"] == pytest.approx(100)
+    assert account["rejected_min_size"] == 1
