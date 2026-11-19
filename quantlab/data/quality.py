@@ -13,18 +13,16 @@ def _expected_datasets(cfg):
     crypto = cfg["data"]["crypto"]
     for symbol in crypto["symbols"]:
         safe = symbol.replace("/", "_")
-        expected.append((
-            f"crypto_{safe}_{crypto['timeframe']}.csv",
-            crypto["timeframe"],
-            "crypto",
-        ))
+        expected.append((f"crypto_{safe}_{crypto['timeframe']}.csv", crypto["timeframe"], "crypto"))
+
     forex = cfg["data"]["forex"]
     for symbol in forex["symbols"]:
-        expected.append((
-            f"forex_{symbol}_{forex['interval']}.csv",
-            forex["interval"],
-            "forex",
-        ))
+        expected.append((f"forex_{symbol}_{forex['interval']}.csv", forex["interval"], "forex"))
+
+    futures = cfg["data"].get("futures", {})
+    for symbol in futures.get("symbols", []):
+        timeframe = futures.get("timeframe", "1h")
+        expected.append((f"futures_{symbol}_{timeframe}.csv", timeframe, "futures"))
     return expected
 
 
@@ -32,38 +30,26 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     now = now or datetime.now(timezone.utc)
     if not path.exists():
         return {
-            "dataset": path.name,
-            "market_type": market_type,
-            "status": "MISSING",
-            "rows": 0,
-            "duplicate_timestamps": None,
-            "missing_ohlcv_rows": None,
-            "missing_volume_rows": None,
-            "invalid_ohlc_rows": None,
-            "max_gap_hours": None,
-            "last_bar_age_hours": None,
-            "first_bar_utc": None,
-            "last_bar_utc": None,
+            "dataset": path.name, "market_type": market_type, "status": "MISSING",
+            "rows": 0, "duplicate_timestamps": None, "missing_ohlcv_rows": None,
+            "missing_volume_rows": None, "missing_funding_rows": None,
+            "invalid_ohlc_rows": None, "max_gap_hours": None,
+            "last_bar_age_hours": None, "first_bar_utc": None, "last_bar_utc": None,
         }
 
     frame = pd.read_csv(path)
     frame.columns = [str(col).lower() for col in frame.columns]
     time_col = next((c for c in ("timestamp", "datetime", "date") if c in frame.columns), None)
-    required_columns = OHLCV if market_type == "crypto" else ["open", "high", "low", "close"]
+    required_columns = OHLCV if market_type in ("crypto", "futures") else ["open", "high", "low", "close"]
+    if market_type == "futures":
+        required_columns = required_columns + ["funding_rate"]
     if time_col is None or not set(required_columns).issubset(frame.columns):
         return {
-            "dataset": path.name,
-            "market_type": market_type,
-            "status": "INVALID_SCHEMA",
-            "rows": int(len(frame)),
-            "duplicate_timestamps": None,
-            "missing_ohlcv_rows": None,
-            "missing_volume_rows": None,
-            "invalid_ohlc_rows": None,
-            "max_gap_hours": None,
-            "last_bar_age_hours": None,
-            "first_bar_utc": None,
-            "last_bar_utc": None,
+            "dataset": path.name, "market_type": market_type, "status": "INVALID_SCHEMA",
+            "rows": int(len(frame)), "duplicate_timestamps": None, "missing_ohlcv_rows": None,
+            "missing_volume_rows": None, "missing_funding_rows": None,
+            "invalid_ohlc_rows": None, "max_gap_hours": None,
+            "last_bar_age_hours": None, "first_bar_utc": None, "last_bar_utc": None,
         }
 
     parsed = pd.to_datetime(frame[time_col], utc=True, errors="coerce")
@@ -71,16 +57,24 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     duplicates = int(parsed.duplicated().sum())
     missing = int(frame[required_columns].isna().any(axis=1).sum())
     missing_volume = int(frame["volume"].isna().sum()) if "volume" in frame.columns else int(len(frame))
+    missing_funding = int(frame["funding_rate"].isna().sum()) if market_type == "futures" else 0
+
     numeric = frame[["open", "high", "low", "close"]].apply(pd.to_numeric, errors="coerce")
     invalid = (
         (numeric["high"] < numeric[["open", "close"]].max(axis=1))
         | (numeric["low"] > numeric[["open", "close"]].min(axis=1))
         | (numeric["high"] < numeric["low"])
+        | (numeric["open"] <= 0)
         | (numeric["close"] <= 0)
     )
     invalid_rows = int(invalid.fillna(True).sum())
-    if market_type == "crypto" and "volume" in frame.columns:
+    if market_type in ("crypto", "futures") and "volume" in frame.columns:
         invalid_rows += int((pd.to_numeric(frame["volume"], errors="coerce") < 0).fillna(True).sum())
+    if market_type == "futures":
+        funding_numeric = pd.to_numeric(frame["funding_rate"], errors="coerce")
+        invalid_rows += int(
+            funding_numeric.replace([float("inf"), float("-inf")], float("nan")).isna().sum()
+        )
 
     gaps = valid_times.diff().dropna().dt.total_seconds() / 3600
     max_gap = float(gaps.max()) if not gaps.empty else 0.0
@@ -107,6 +101,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
         "duplicate_timestamps": duplicates,
         "missing_ohlcv_rows": missing,
         "missing_volume_rows": missing_volume,
+        "missing_funding_rows": missing_funding,
         "invalid_ohlc_rows": invalid_rows,
         "max_gap_hours": max_gap,
         "last_bar_age_hours": age_hours,
