@@ -50,6 +50,13 @@ jobs:
           .venv/bin/python --version
           .venv/bin/python -m quantlab.exchange.market_data_cli
 
+      - name: Download Bybit Demo linear perpetual mark and funding data (read-only)
+        env:
+          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
+          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
+          PYTHONFAULTHANDLER: "1"
+        run: .venv/bin/python -m quantlab.exchange.bybit_demo_futures_cli
+
       - name: Upload connection and market-data reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,5 +66,7 @@ jobs:
             reports/bybit_demo_connection.json
             reports/bybit_demo_market_data.json
             data/raw/bybit_demo_linear_*.csv
+            reports/bybit_demo_futures_data.json
+            data/bybit_demo/bybit_demo_linear_*.csv
           if-no-files-found: warn
           retention-days: 7
