@@ -78,3 +78,56 @@ def test_long_short_simulator_respects_minimum_quantity():
     assert result.iloc[-1]["event"] == "below_minimum_size"
     assert metrics["rejected_min_size"] == 1
     assert result.iloc[-1]["position"] == 0
+
+
+
+def test_negative_funding_is_paid_by_open_short_and_received_by_long():
+    short = new_long_short_account(100)
+    short, _ = apply_long_short_signal(
+        short, -1, 100, 0, "short-open",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    short, short_event = apply_long_short_signal(
+        short, -1, 100, -0.01, "short-funding",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    assert short_event["funding_payment"] == pytest.approx(1.0)
+    assert short["position"]["margin_balance"] == pytest.approx(49.0)
+
+    long = new_long_short_account(100)
+    long, _ = apply_long_short_signal(
+        long, 1, 100, 0, "long-open",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    long, long_event = apply_long_short_signal(
+        long, 1, 100, -0.01, "long-funding",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    assert long_event["funding_payment"] == pytest.approx(-1.0)
+    assert long["position"]["margin_balance"] == pytest.approx(51.0)
+
+
+def test_positive_funding_is_paid_by_open_long():
+    account = new_long_short_account(100)
+    account, _ = apply_long_short_signal(
+        account, 1, 100, 0, "open",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    account, event = apply_long_short_signal(
+        account, 1, 100, 0.01, "settlement",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    assert event["funding_payment"] == pytest.approx(1.0)
+    assert account["position"]["margin_balance"] == pytest.approx(49.0)
