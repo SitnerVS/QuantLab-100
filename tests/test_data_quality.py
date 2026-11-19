@@ -106,3 +106,26 @@ def test_duplicate_timestamps_and_invalid_ohlc_are_flagged(tmp_path):
     assert result["status"] == "WARN"
     assert result["duplicate_timestamps"] == 1
     assert result["invalid_ohlc_rows"] == 1
+
+
+def test_futures_dataset_requires_funding_rate(tmp_path):
+    path = tmp_path / "futures.csv"
+    times = pd.date_range("2026-01-01", periods=60, freq="h", tz="UTC")
+    frame = pd.DataFrame({
+        "timestamp": times,
+        "open": [100.0] * 60,
+        "high": [102.0] * 60,
+        "low": [99.0] * 60,
+        "close": [101.0] * 60,
+        "volume": [10.0] * 60,
+        "funding_rate": [0.0001] * 60,
+    })
+    frame.to_csv(path, index=False)
+    result = analyze_dataset(
+        path,
+        "1h",
+        "futures",
+        now=datetime(2026, 1, 3, tzinfo=timezone.utc),
+    )
+    assert result["status"] == "OK"
+    assert result["missing_funding_rows"] == 0
