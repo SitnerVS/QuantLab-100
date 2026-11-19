@@ -4,7 +4,7 @@ import json
 
 import pandas as pd
 
-from quantlab.paper.engine import apply_paper_signal, new_account
+from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 from quantlab.strategies import build_signals
 
 RAW = Path("data/raw")
@@ -88,7 +88,9 @@ def run_paper(cfg):
         }
 
     # Backward-compatible state migration from the initial signal-only prototype.
-    state.setdefault("schema_version", 2)
+    if int(state.get("schema_version", 1)) < 3:
+        state["accounts"] = {}
+    state["schema_version"] = 3
     state.setdefault("accounts", {})
     state.setdefault("unsupported_sleeves", {
         "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
@@ -130,7 +132,7 @@ def run_paper(cfg):
             if account is None:
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
                 allocation_rub = sleeve_capital / max(1, counts[sleeve])
-                allocation_usd = allocation_rub / usd_rub_rate
+                allocation_usd = rub_to_usd(allocation_rub, usd_rub_rate)
                 account = new_account(allocation_usd)
                 account["initial_capital_rub"] = allocation_rub
 
