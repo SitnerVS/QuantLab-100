@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T13:58:54.950550+00:00
+Updated (UTC): 2026-11-19T14:44:36.273522+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 0.46 h; remaining: 71.54 h
+Elapsed: 1.22 h; remaining: 70.78 h
 
 ## Target
 
@@ -18,17 +18,17 @@ Elapsed: 0.46 h; remaining: 71.54 h
 - Equity: 100.0000 RUB; total return: +0.00000%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 122.71 RUB; budget shortfall: 22.71 RUB
+- Lowest configured crypto minimum-order capital: 123.23 RUB; budget shortfall: 23.23 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
-- Cumulative rejected minimum-size orders: 6; new rejections this run: 0
+- Cumulative rejected minimum-size orders: 12; new rejections this run: 6
 
 ## Fractional shadow portfolio — NON-EXECUTABLE
 
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
-- Equity: 99.9651 RUB; total return: -0.03494%
-- Active return: -0.04659%; fills this run: 0; open positions: 6; closed trades: 0
-- Fees paid: 0.00028895 USD; funding paid (net sign as recorded): 0.00000000 USD
+- Equity: 100.0327 RUB; total return: +0.03273%
+- Active return: +0.04365%; fills this run: 0; open positions: 6; closed trades: 0
+- Fees paid: 0.00028895 USD; funding paid (net sign as recorded): -0.00000023 USD
 - Liquidations: 0
 
 ## Historical out-of-sample research
@@ -41,15 +41,15 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 |---|---|---:|---:|---:|
 | forex_RUB=X_1d.csv | bb_signal | +1.9775% | 66.7% | 6 |
 | forex_JPY=X_1d.csv | rsi_signal | +0.1257% | 50.0% | 6 |
-| forex_GBPUSD=X_1d.csv | donchian_signal | +0.0000% | 16.7% | 6 |
+| crypto_SOL_USD_1h.csv | ema_signal | +0.0000% | 11.1% | 9 |
 
 ### Crypto futures
 
 | Dataset | Strategy | Median OOS return | Positive folds | Folds |
 |---|---|---:|---:|---:|
-| futures_PF_SOLUSD_1h.csv | rsi_signal | +0.4107% | 55.6% | 9 |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | +0.3935% | 55.6% | 9 |
 | futures_PF_SOLUSD_1h.csv | bb_signal | +0.0231% | 55.6% | 9 |
-| futures_PF_SOLUSD_1h.csv | ema_signal | +0.0000% | 11.1% | 9 |
+| futures_PF_SOLUSD_1h.csv | ema_signal | +0.0000% | 22.2% | 9 |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.

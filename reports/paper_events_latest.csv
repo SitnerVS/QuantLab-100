@@ -1,1 +1,7 @@
-
+dataset,sleeve,timestamp,signal,status,attempted_quantity,minimum_quantity,attempted_notional,minimum_notional,cash,equity,unrealized_pnl,backfilled,funding_payment,fee,liquidated,wallet,margin_balance,realized_pnl
+crypto_BTC_USD_1h,crypto_spot,2026-11-19T13:00:00+00:00,1,below_minimum_size,3.9567707030369283e-07,6e-05,0.025325976010029498,0.5,0.1015672941906223,0.1015672941906223,0.0,False,,,,,,
+crypto_ETH_USD_1h,crypto_spot,2026-11-19T13:00:00+00:00,1,below_minimum_size,1.3971588238126573e-05,0.002,0.0253259760100295,0.5,0.1015672941906223,0.1015672941906223,0.0,False,,,,,,
+crypto_SOL_USD_1h,crypto_spot,2026-11-19T13:00:00+00:00,1,below_minimum_size,0.0003371176017089467,0.05,0.0253259760100295,0.5,0.1015672941906223,0.1015672941906223,0.0,False,,,,,,
+futures_PF_ETHUSD_1h,crypto_futures_sim,2026-11-19T13:00:00+00:00,1,below_minimum_size,2.8014958568726646e-05,0.001,,,,0.1015672941906223,0.0,False,0.0,0.0,False,0.1015672941906223,0.0,0.0
+futures_PF_SOLUSD_1h,crypto_futures_sim,2026-11-19T13:00:00+00:00,1,below_minimum_size,0.0006758233791729844,0.01,,,,0.1015672941906223,0.0,False,0.0,0.0,False,0.1015672941906223,0.0,0.0
+futures_PF_XBTUSD_1h,crypto_futures_sim,2026-11-19T13:00:00+00:00,1,below_minimum_size,7.933838806205583e-07,0.0001,,,,0.1015672941906223,0.0,False,0.0,0.0,False,0.1015672941906223,0.0,0.0
