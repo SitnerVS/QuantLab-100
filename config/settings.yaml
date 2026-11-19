@@ -1,0 +1,35 @@
+project:
+  name: QuantLab 100
+  mode: paper
+  timezone: UTC
+
+capital:
+  total_rub: 100.0
+  portfolios:
+    crypto_spot: 25.0
+    crypto_futures_sim: 25.0
+    forex_spot_sim: 25.0
+    forex_leveraged_sim: 25.0
+
+data:
+  crypto:
+    exchange: binance
+    symbols: ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+    timeframe: "1h"
+    limit: 1000
+  forex:
+    symbols: ["EURUSD=X", "GBPUSD=X", "JPY=X"]
+    interval: "1d"
+    period: "2y"
+
+costs:
+  crypto_fee_rate: 0.001
+  forex_fee_rate: 0.0002
+  slippage_rate: 0.0005
+
+backtest:
+  initial_cash: 100.0
+  min_observations: 60
+
+paper:
+  max_position_fraction: 0.25
