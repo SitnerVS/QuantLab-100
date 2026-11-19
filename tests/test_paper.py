@@ -249,6 +249,7 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
         "active_initial_capital_rub": 75,
         "inactive_capital_rub": 25,
         "minimum_lot_blocked_capital_rub": 50,
+        "lowest_crypto_min_order_capital_rub": 122.71,
         "fills_this_run": 0,
         "rejected_orders_this_run": 6,
         "open_positions": 0,
@@ -272,6 +273,7 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
     assert "bb_signal" in report
     assert "Holm-adjusted p-value" in report
     assert "open positions: 6" in report
+    assert "budget shortfall: 22.71 RUB" in report
 
 
 
