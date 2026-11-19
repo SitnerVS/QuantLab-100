@@ -55,12 +55,24 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update QuantLab research outputs"
             git fetch origin main
-            if git rebase origin/main; then
-              git push origin HEAD:main
-            else
-              git rebase --abort
-              echo "::warning::Concurrent update prevented committing generated state. The run artifact is preserved; the next run will retry."
+            if ! git rebase origin/main; then
+              conflict_files="$(git diff --name-only --diff-filter=U)"
+              for file in $conflict_files; do
+                case "$file" in
+                  data/processed/*|reports/*.csv)
+                    git checkout --theirs -- "$file"
+                    git add "$file"
+                    ;;
+                  *)
+                    echo "::error::Unexpected rebase conflict in $file"
+                    git rebase --abort
+                    exit 1
+                    ;;
+                esac
+              done
+              GIT_EDITOR=true git rebase --continue
             fi
+            git push origin HEAD:main
           else
             echo "No report or state changes to commit."
           fi
