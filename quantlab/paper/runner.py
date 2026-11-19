@@ -5,6 +5,7 @@ import json
 import pandas as pd
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
+from quantlab.futures.engine import apply_isolated_futures_signal, new_futures_account
 from quantlab.strategies import build_signals
 
 RAW = Path("data/raw")
@@ -19,13 +20,20 @@ TIMEFRAME_MINUTES = {
 
 
 def _dataset_sleeve(filename):
+    if filename.startswith("futures_"):
+        return "crypto_futures_sim"
     if filename.startswith("crypto_"):
         return "crypto_spot"
-    if filename.startswith("forex_") and "EURUSD=X" in filename:
-        return "forex_spot_sim"
-    if filename.startswith("forex_") and "GBPUSD=X" in filename:
+    if filename.startswith("forex_") and ("EURUSD=X" in filename or "GBPUSD=X" in filename):
         return "forex_spot_sim"
     return None
+
+
+def _paper_signal_for_latest(enriched, signal_col="ema_signal"):
+    """Use the previous completed bar's signal for the current bar's close proxy."""
+    if len(enriched) < 2:
+        return None
+    return int(enriched.iloc[-2][signal_col])
 
 
 def _latest_usd_rub_rate(cfg, now):
@@ -54,7 +62,9 @@ def _latest_usd_rub_rate(cfg, now):
 
 
 def _bar_duration(filename, cfg):
-    if filename.startswith("crypto_"):
+    if filename.startswith("futures_"):
+        timeframe = cfg["data"]["futures"].get("timeframe", "1h")
+    elif filename.startswith("crypto_"):
         timeframe = cfg["data"]["crypto"].get("timeframe", "1h")
     else:
         timeframe = cfg["data"]["forex"].get("interval", "1d")
@@ -73,7 +83,75 @@ def _latest_closed_bar(frame, filename, cfg, now):
     closed = frame.loc[frame["_bar_time"] + _bar_duration(filename, cfg) <= now]
     if closed.empty:
         return None
-    return closed.drop(columns=["_bar_time"]).iloc[-1], closed.drop(columns=["_bar_time"])
+    clean = closed.drop(columns=["_bar_time"])
+    return clean.iloc[-1], clean
+
+
+def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate):
+    close = float(latest["close"])
+    equity = float(account["cash"]) + float(account["quantity"]) * close
+    unrealized = (
+        float(account["quantity"]) * (close - float(account["position_entry_price"]))
+        if account["quantity"] > 0 and account["position_entry_price"] is not None else 0.0
+    )
+    return {
+        "dataset": key,
+        "sleeve": sleeve,
+        "bar_time_utc": bar_time,
+        "initial_capital_rub": float(account.get("initial_capital_rub", allocation_rub)),
+        "close_or_mark": close,
+        "signal": int(latest.get("paper_signal", 0)),
+        "cash_usd": float(account["cash"]),
+        "margin_balance_usd": 0.0,
+        "quantity": float(account["quantity"]),
+        "equity_usd": equity,
+        "equity_rub_estimate": equity * usd_rub_rate,
+        "usd_rub_rate": usd_rub_rate,
+        "realized_pnl_usd": float(account["realized_pnl"]),
+        "realized_pnl_rub_estimate": float(account["realized_pnl"]) * usd_rub_rate,
+        "unrealized_pnl_usd": unrealized,
+        "funding_paid_usd": 0.0,
+        "fees_paid_usd": float(account.get("fees_paid", 0.0)),
+        "liquidations": 0,
+        "closed_trades": int(account["trade_count"] // 2),
+        "trade_count": int(account["trade_count"]),
+        "execution_model": "previous_bar_signal_current_completed_close_proxy",
+    }
+
+
+def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, usd_rub_rate):
+    mark = float(latest["close"])
+    position = account.get("position")
+    quantity = float(position["quantity"]) if position is not None else 0.0
+    margin_balance = float(position["margin_balance"]) if position is not None else 0.0
+    unrealized = (
+        quantity * (mark - float(position["entry_price"]))
+        if position is not None else 0.0
+    )
+    equity = float(account["wallet"]) + margin_balance + unrealized
+    return {
+        "dataset": key,
+        "sleeve": sleeve,
+        "bar_time_utc": bar_time,
+        "initial_capital_rub": float(account.get("initial_capital_rub", allocation_rub)),
+        "close_or_mark": mark,
+        "signal": int(latest.get("paper_signal", 0)),
+        "cash_usd": float(account["wallet"]),
+        "margin_balance_usd": margin_balance,
+        "quantity": quantity,
+        "equity_usd": equity,
+        "equity_rub_estimate": equity * usd_rub_rate,
+        "usd_rub_rate": usd_rub_rate,
+        "realized_pnl_usd": float(account["realized_pnl"]),
+        "realized_pnl_rub_estimate": float(account["realized_pnl"]) * usd_rub_rate,
+        "unrealized_pnl_usd": unrealized,
+        "funding_paid_usd": float(account["funding_paid"]),
+        "fees_paid_usd": float(account["fees_paid"]),
+        "liquidations": int(account["liquidations"]),
+        "closed_trades": int(account["closed_trades"]),
+        "trade_count": int(account["closed_trades"] + account["liquidations"]),
+        "execution_model": "previous_bar_signal_mark_close_proxy_observed_funding",
+    }
 
 
 def run_paper(cfg):
@@ -84,25 +162,16 @@ def run_paper(cfg):
     if STATE.exists():
         state = json.loads(STATE.read_text(encoding="utf-8"))
     else:
-        state = {
-            "schema_version": 2,
-            "created_at": now.isoformat(),
-            "accounts": {},
-            "unsupported_sleeves": {
-                "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
-                "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated",
-            },
-        }
+        state = {"created_at": now.isoformat(), "accounts": {}}
 
-    # Backward-compatible state migration from the initial signal-only prototype.
-    if int(state.get("schema_version", 1)) < 5:
+    # Reset pre-futures state and spot accounts after correcting signal timing.
+    if int(state.get("schema_version", 1)) < 6:
         state["accounts"] = {}
-    state["schema_version"] = 5
+    state["schema_version"] = 6
     state.setdefault("accounts", {})
-    state.setdefault("unsupported_sleeves", {
-        "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
-        "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated",
-    })
+    state["unsupported_sleeves"] = {
+        "forex_leveraged_sim": "disabled_until_broker_grade_FX_margin_and_rollover_data_exists"
+    }
 
     usd_rub_rate, fx_timestamp = _latest_usd_rub_rate(cfg, now)
     state["base_currency"] = "RUB"
@@ -110,25 +179,32 @@ def run_paper(cfg):
     state["usd_rub_rate"] = usd_rub_rate
     state["usd_rub_timestamp_utc"] = fx_timestamp
 
-    quality_path = REPORTS / "data_quality.csv"
-    quality = pd.read_csv(quality_path)
+    quality = pd.read_csv(REPORTS / "data_quality.csv")
     valid_names = set(quality.loc[quality["status"] == "OK", "dataset"].astype(str))
-    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name) and p.name in valid_names)
-    counts = {"crypto_spot": 0, "forex_spot_sim": 0}
+    paths = sorted(
+        p for p in RAW.glob("*.csv")
+        if _dataset_sleeve(p.name) and p.name in valid_names
+    )
+    counts = {
+        "crypto_spot": 0,
+        "crypto_futures_sim": 0,
+        "forex_spot_sim": 0,
+    }
     for path in paths:
-        sleeve = _dataset_sleeve(path.name)
-        counts[sleeve] += 1
+        counts[_dataset_sleeve(path.name)] += 1
+
     events = []
     snapshots = []
-
     for path in paths:
         sleeve = _dataset_sleeve(path.name)
         try:
             frame = pd.read_csv(path)
             frame.columns = [str(col).lower() for col in frame.columns]
             required = {"open", "high", "low", "close", "volume"}
+            if sleeve == "crypto_futures_sim":
+                required.add("funding_rate")
             if not required.issubset(frame.columns) or len(frame) < 60:
-                print(f"[paper] SKIP {path.name}: missing OHLCV or insufficient history")
+                print(f"[paper] SKIP {path.name}: missing required columns or insufficient history")
                 continue
 
             latest_result = _latest_closed_bar(frame, path.name, cfg, now)
@@ -137,57 +213,70 @@ def run_paper(cfg):
                 continue
             latest_row, closed_frame = latest_result
             enriched = build_signals(closed_frame)
-            latest = enriched.iloc[-1]
+            if len(enriched) < 2:
+                print(f"[paper] SKIP {path.name}: insufficient bars for lagged signal")
+                continue
+            latest = enriched.iloc[-1].copy()
+            signal = _paper_signal_for_latest(enriched)
+            latest["paper_signal"] = signal
+
             key = path.stem
             account = state["accounts"].get(key)
             if account is None:
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
                 allocation_rub = sleeve_capital / max(1, counts[sleeve])
                 allocation_usd = rub_to_usd(allocation_rub, usd_rub_rate)
-                account = new_account(allocation_usd)
+                if sleeve == "crypto_futures_sim":
+                    account = new_futures_account(allocation_usd)
+                else:
+                    account = new_account(allocation_usd)
                 account["initial_capital_rub"] = allocation_rub
 
-            signal = int(latest["ema_signal"])
             bar_time = pd.to_datetime(
                 latest_row.get("timestamp", latest_row.get("datetime", latest_row.get("date"))),
                 utc=True,
             ).isoformat()
-            costs = cfg["costs"]
-            account, event = apply_paper_signal(
-                account,
-                signal,
-                float(latest["close"]),
-                bar_time,
-                fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
-                slippage_rate=float(costs["slippage_rate"]),
-                spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
-                max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-            )
+
+            if sleeve == "crypto_futures_sim":
+                futures_cfg = cfg["futures"]
+                account, event = apply_isolated_futures_signal(
+                    account,
+                    signal,
+                    float(latest["close"]),
+                    float(latest["funding_rate"]),
+                    bar_time,
+                    leverage=float(futures_cfg["leverage"]),
+                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                    fee_rate=float(futures_cfg["fee_rate"]),
+                    slippage_rate=float(futures_cfg["slippage_rate"]),
+                    spread_rate=float(futures_cfg["spread_rate"]),
+                    maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                    liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                )
+                snapshot = _snapshot_futures(
+                    account, latest, sleeve, key, bar_time,
+                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                )
+            else:
+                costs = cfg["costs"]
+                account, event = apply_paper_signal(
+                    account,
+                    signal,
+                    float(latest["close"]),
+                    bar_time,
+                    fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
+                    slippage_rate=float(costs["slippage_rate"]),
+                    spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
+                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                )
+                snapshot = _snapshot_spot(
+                    account, latest, sleeve, key, bar_time,
+                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+                )
+
             state["accounts"][key] = account
             events.append({"dataset": key, "sleeve": sleeve, **event})
-
-            equity = float(account["cash"]) + float(account["quantity"]) * float(latest["close"])
-            snapshots.append({
-                "dataset": key,
-                "sleeve": sleeve,
-                "bar_time_utc": bar_time,
-                "initial_capital_rub": float(account.get("initial_capital_rub", 0.0)),
-                "close": float(latest["close"]),
-                "signal": signal,
-                "cash_usd": float(account["cash"]),
-                "quantity": float(account["quantity"]),
-                "equity_usd": equity,
-                "equity_rub_estimate": equity * usd_rub_rate,
-                "usd_rub_rate": usd_rub_rate,
-                "realized_pnl_usd": float(account["realized_pnl"]),
-                "realized_pnl_rub_estimate": float(account["realized_pnl"]) * usd_rub_rate,
-                "unrealized_pnl_usd": (
-                    float(account["quantity"]) * (float(latest["close"]) - float(account["position_entry_price"]))
-                    if account["quantity"] > 0 and account["position_entry_price"] is not None else 0.0
-                ),
-                "trade_count": int(account["trade_count"]),
-                "execution_model": "completed_bar_close_proxy_with_fee_spread_slippage",
-            })
+            snapshots.append(snapshot)
         except Exception as exc:
             print(f"[paper] ERROR {path.name}: {exc}")
 
@@ -209,8 +298,15 @@ def run_paper(cfg):
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
         "accounts": len(snapshots),
-        "fills_this_run": sum(e.get("status") in ("buy", "sell") for e in events),
+        "fills_this_run": sum(
+            event.get("status") in ("buy", "sell", "open", "close", "liquidation")
+            for event in events
+        ),
         "real_orders": False,
     }])
     summary.to_csv(REPORTS / "paper_portfolio_summary.csv", index=False)
-    print(f"Paper engine: {len(snapshots)} accounts scanned; {sum(e.get('status') in ('buy', 'sell') for e in events)} fills; no real orders.")
+    print(
+        f"Paper engine: {len(snapshots)} accounts scanned; "
+        f"{sum(event.get('status') in ('buy', 'sell', 'open', 'close', 'liquidation') for event in events)} fills/events; "
+        "no real orders."
+    )
