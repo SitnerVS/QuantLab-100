@@ -6,7 +6,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - Public historical market data: Kraken spot OHLCV through CCXT; Yahoo Finance FX proxy data through yfinance.
 - A data-quality gate reports missing datasets, schema issues, duplicate timestamps, missing/invalid OHLCV rows and data freshness before research runs.
 - EMA, RSI, Bollinger and Donchian signal families for baseline research.
-- Long/flat historical backtest with configurable fees and slippage, buy-and-hold benchmark, drawdown, annualized rough Sharpe, bar-level profit factor and win rate.
+- Long/flat historical backtest with configurable fees, slippage and half-spread per fill, buy-and-hold benchmark, drawdown, annualized rough Sharpe, bar-level profit factor and win rate.
 - Rolling chronological out-of-sample test windows for fixed causal signals, plus an aggregated ranking by median fold return and positive-fold share; these are evaluation folds, not parameter optimization.
 - Stateful cash-only virtual spot accounts for crypto and FX proxy datasets: buys, sells, cash, quantity, equity, realized and unrealized PnL. Position sizing is capped by a configurable fraction of available cash.
 - Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
