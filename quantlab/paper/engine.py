@@ -28,6 +28,7 @@ def apply_paper_signal(
     account.setdefault("realized_pnl", 0.0)
     account.setdefault("trade_count", 0)
     account.setdefault("position_entry_price", None)
+    account.setdefault("position_entry_cost", None)
     account.setdefault("last_bar", None)
     account.setdefault("ledger", [])
 
@@ -49,6 +50,7 @@ def apply_paper_signal(
         account["cash"] = max(0.0, cash)
         account["quantity"] = quantity
         account["position_entry_price"] = fill
+        account["position_entry_cost"] = notional + commission
         event.update({
             "status": "buy",
             "fill_price": fill,
@@ -62,11 +64,12 @@ def apply_paper_signal(
         proceeds = quantity * fill
         commission = proceeds * fee
         entry = float(account["position_entry_price"] or fill)
-        cost_basis = quantity * entry
+        cost_basis = float(account["position_entry_cost"] or (quantity * entry))
         realized = proceeds - commission - cost_basis
         account["cash"] = cash + proceeds - commission
         account["quantity"] = 0.0
         account["position_entry_price"] = None
+        account["position_entry_cost"] = None
         account["realized_pnl"] = float(account["realized_pnl"]) + realized
         event.update({
             "status": "sell",
