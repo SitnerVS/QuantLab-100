@@ -19,3 +19,17 @@ def test_signal_is_lagged_one_bar():
     result, _ = simulate(frame, "signal", fee_rate=0, slippage_rate=0, initial_cash=100)
     assert result.loc[0, "position"] == 0
     assert result.loc[1, "position"] == 1
+
+
+def test_spread_is_charged_on_entry_and_exit():
+    frame = pd.DataFrame({
+        "close": [100, 100, 100],
+        "signal": [1, 1, 0],
+    })
+    _, no_spread = simulate(
+        frame, "signal", fee_rate=0, slippage_rate=0, spread_rate=0, initial_cash=100
+    )
+    _, with_spread = simulate(
+        frame, "signal", fee_rate=0, slippage_rate=0, spread_rate=0.02, initial_cash=100
+    )
+    assert with_spread["total_return_pct"] < no_spread["total_return_pct"]
