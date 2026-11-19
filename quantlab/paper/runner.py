@@ -29,6 +29,13 @@ def _dataset_sleeve(filename):
 
 
 def _latest_usd_rub_rate(cfg, now):
+    quality_path = REPORTS / "data_quality.csv"
+    if not quality_path.exists():
+        raise RuntimeError("data quality report is missing")
+    quality = pd.read_csv(quality_path)
+    fx_status = quality.loc[quality["dataset"] == "forex_RUB=X_1d.csv", "status"]
+    if fx_status.empty or fx_status.iloc[0] != "OK":
+        raise RuntimeError("USD/RUB conversion data is not fresh and valid")
     path = RAW / "forex_RUB=X_1d.csv"
     if not path.exists():
         raise RuntimeError("USD/RUB conversion dataset forex_RUB=X_1d.csv is missing")
@@ -103,7 +110,10 @@ def run_paper(cfg):
     state["usd_rub_rate"] = usd_rub_rate
     state["usd_rub_timestamp_utc"] = fx_timestamp
 
-    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name))
+    quality_path = REPORTS / "data_quality.csv"
+    quality = pd.read_csv(quality_path)
+    valid_names = set(quality.loc[quality["status"] == "OK", "dataset"].astype(str))
+    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name) and p.name in valid_names)
     counts = {"crypto_spot": 0, "forex_spot_sim": 0}
     for path in paths:
         sleeve = _dataset_sleeve(path.name)
