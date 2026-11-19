@@ -162,6 +162,7 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
         "funding_paid_usd": float(account["funding_paid"]),
         "fees_paid_usd": float(account["fees_paid"]),
         "liquidations": int(account["liquidations"]),
+        "rejected_min_size": int(account.get("rejected_min_size", 0)),
         "closed_trades": int(account["closed_trades"]),
         "trade_count": int(account["closed_trades"] + account["liquidations"]),
         "execution_model": "previous_bar_signal_mark_close_proxy_observed_funding",
@@ -179,11 +180,11 @@ def run_paper(cfg):
         state = {"created_at": now.isoformat(), "accounts": {}}
 
     # Reset pre-futures state and spot accounts after correcting signal timing.
-    if int(state.get("schema_version", 1)) < 6:
+    if int(state.get("schema_version", 1)) < 7:
         state["accounts"] = {}
         state["created_at"] = now.isoformat()
         state["experiment_id"] = "quantlab-100-paper-72h-v1"
-    state["schema_version"] = 6
+    state["schema_version"] = 7
     state.setdefault("experiment_id", "quantlab-100-paper-72h-v1")
     state.setdefault("accounts", {})
     experiment = _experiment_window(state["created_at"], now, duration_hours=72)
@@ -275,6 +276,7 @@ def run_paper(cfg):
                         spread_rate=float(futures_cfg["spread_rate"]),
                         maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
                         liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                        min_order_size=float(latest["min_order_size"]),
                     )
                 snapshot = _snapshot_futures(
                     account, latest, sleeve, key, bar_time,
@@ -313,6 +315,13 @@ def run_paper(cfg):
 
     active_initial_rub = sum(row["initial_capital_rub"] for row in snapshots)
     total_equity_rub = sum(row["equity_rub_estimate"] for row in snapshots)
+    minimum_lot_blocked_rub = sum(
+        float(account.get("initial_capital_rub", 0.0))
+        for key, account in state["accounts"].items()
+        if key.startswith("futures_")
+        and int(account.get("rejected_min_size", 0)) > 0
+        and account.get("position") is None
+    )
     total_capital_rub = float(cfg["capital"]["total_rub"])
     summary = pd.DataFrame([{
         "timestamp_utc": now.isoformat(),
@@ -329,6 +338,8 @@ def run_paper(cfg):
         "usd_rub_rate_timestamp_utc": fx_timestamp,
         "active_initial_capital_rub": active_initial_rub,
         "inactive_capital_rub": max(0.0, total_capital_rub - active_initial_rub),
+        "minimum_lot_blocked_capital_rub": minimum_lot_blocked_rub,
+        "tradable_paper_capital_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
         "accounts": len(snapshots),
