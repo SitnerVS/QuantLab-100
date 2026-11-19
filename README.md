@@ -2,50 +2,39 @@
 
 Research-first paper-trading lab for crypto and FX. **Paper mode only: no real orders are submitted.**
 
-## Scope of this starter
+## Current capabilities
 - Public historical market data: Binance spot OHLCV through CCXT; Yahoo Finance FX proxy data through yfinance.
-- Four signal families: EMA trend, RSI oversold, Bollinger reversion, Donchian breakout.
-- Long/flat backtest with next-bar signal execution, configurable fees and slippage.
-- Hourly GitHub Actions run, reports and paper-signal snapshots.
-- No API keys, exchange credentials, or real-order execution code.
+- EMA, RSI, Bollinger and Donchian signal families for baseline research.
+- Long/flat historical backtest with configurable fees and slippage.
+- Stateful cash-only virtual spot accounts for crypto and FX proxy datasets: buys, sells, cash, quantity, equity, realized and unrealized PnL.
+- Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
+- GitHub Actions runs tests and research on pushes to main and hourly (UTC).
 
-## Important limitations
-- The 100 RUB to 10,000 RUB in 72 hours objective is a high-risk experimental target, not a forecast or promise.
-- Four virtual sleeves start at 25 RUB each. This is a simulation; actual exchange minimum order sizes may make 100 RUB untradeable.
-- Yahoo Finance FX symbols are research proxies, not broker-grade executable bid/ask ticks.
-- The initial futures/leveraged sleeves are **not yet implemented as realistic margin simulations**. Funding, rollover, maintenance margin, liquidation and mark prices must be added and validated before futures results are meaningful.
-- The initial backtester is a research baseline, not a production-grade execution simulator. It does not yet implement full walk-forward validation or multiple-testing corrections.
-- Backtests do not guarantee future results.
+## Important model boundaries
+- The 100 RUB to 10,000 RUB in 72 hours objective is an extreme experimental target, not a forecast or promise.
+- Four sleeves are budgeted at 25 RUB each. Only crypto spot and FX proxy sleeves are currently enabled in the paper engine. Futures and leveraged sleeves are explicitly disabled until a separately tested margin, funding, mark-price and liquidation model exists.
+- The FX symbols from Yahoo Finance are research proxies, not broker-grade executable bid/ask data. In particular, JPY=X is not a broker-specific USD/JPY feed.
+- Paper fills use completed-bar close as a reference price plus conservative fee/spread/slippage adjustments. They are not order-book fills and do not model latency or partial fills.
+- Current paper strategy is EMA trend only. The other signal families are research candidates, not automatically traded.
+- The historical backtester remains a simplified baseline; it does not yet implement full walk-forward validation, bootstrap confidence intervals or multiple-testing correction.
+- Small balances may be below real exchange minimum order sizes. All balances and fills are virtual.
 
-## Local setup (Mac)
+## Run locally
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 python -m quantlab.cli run --config config/settings.yaml
-pytest -q
+python -m pytest -q
 ```
 
-## GitHub setup
-1. Create a public repository named `QuantLab-100`.
-2. Upload this project to the `main` branch.
-3. Open **Settings → Actions → General** and allow read/write workflow permissions.
-4. Open **Actions → QuantLab scheduled research → Run workflow** for a manual run.
-5. The workflow is scheduled hourly (UTC). GitHub scheduled workflows can be delayed during high load; do not treat them as a continuous trading server.
+## GitHub Actions
+The workflow runs tests and the research pipeline on pushes to main, pull requests (tests and research without committing), manual dispatch, and hourly UTC schedule. Research artifacts are retained for 14 days. Scheduled GitHub Actions can be delayed and are not a continuous trading server.
 
-## Commands
-```bash
-python -m quantlab.cli download --config config/settings.yaml
-python -m quantlab.cli backtest --config config/settings.yaml
-python -m quantlab.cli paper --config config/settings.yaml
-python -m quantlab.cli run --config config/settings.yaml
-```
-
-## Roadmap before a 72-hour experiment
-1. Implement stateful virtual positions, entry/exit fills, equity and realized/unrealized PnL.
-2. Add separate fee, spread, slippage and financing models per venue/instrument.
-3. Implement futures funding, mark price, maintenance margin and liquidation; otherwise exclude futures from performance claims.
-4. Add strict chronological train/validation/test splits and walk-forward testing.
-5. Add confidence intervals, bootstrap, multiple-testing controls and a benchmark.
-6. Validate data freshness, missing bars, duplicate timestamps and source outages.
+## Roadmap
+1. Complete and validate the event-driven paper engine and its persistence (current implementation is initial spot-only version).
+2. Improve data validation, source health checks and instrument metadata.
+3. Add realistic futures funding, maintenance margin, mark-price and liquidation simulation before enabling leveraged sleeves.
+4. Add chronological train/validation/test splits, walk-forward testing, benchmark comparisons, confidence intervals and multiple-testing controls.
+5. Improve execution modelling with next-bar prices, spread sources, partial fills and venue constraints.
