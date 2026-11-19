@@ -4,3 +4,4 @@ numpy>=1.26,<3
 PyYAML>=6,<7
 yfinance>=0.2.50
 pytest>=8,<9
+pybit>=5.8,<6
