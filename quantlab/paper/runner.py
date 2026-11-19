@@ -384,6 +384,9 @@ def run_paper(cfg):
             event.get("status") in ("buy", "sell", "open", "close", "liquidation")
             for event in events
         ),
+        "rejected_orders_this_run": sum(
+            event.get("status") == "below_minimum_size" for event in events
+        ),
         "real_orders": False,
     }])
     summary.to_csv(REPORTS / "paper_portfolio_summary.csv", index=False)
