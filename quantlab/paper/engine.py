@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import math
 
 
 def apply_paper_signal(
@@ -22,8 +22,12 @@ def apply_paper_signal(
     close = float(close)
     if close <= 0:
         raise ValueError("close must be positive")
-    if min(float(fee_rate), float(slippage_rate), float(spread_rate)) < 0:
-        raise ValueError("cost rates cannot be negative")
+    rates = (fee_rate, slippage_rate, spread_rate)
+    if any(not math.isfinite(float(rate)) or float(rate) < 0 for rate in rates):
+        raise ValueError("cost rates must be finite and non-negative")
+    minimums = (min_order_size, min_notional)
+    if any(not math.isfinite(float(value)) or float(value) < 0 for value in minimums):
+        raise ValueError("minimum order constraints must be finite and non-negative")
     max_position_fraction = float(max_position_fraction)
     if not 0 < max_position_fraction <= 1:
         raise ValueError("max_position_fraction must be in (0, 1]")
@@ -33,6 +37,7 @@ def apply_paper_signal(
     account.setdefault("quantity", 0.0)
     account.setdefault("realized_pnl", 0.0)
     account.setdefault("trade_count", 0)
+    account.setdefault("fees_paid", 0.0)
     account.setdefault("rejected_min_size", 0)
     account.setdefault("position_entry_price", None)
     account.setdefault("position_entry_cost", None)
@@ -64,6 +69,7 @@ def apply_paper_signal(
             })
         else:
             commission = notional * fee
+            account["fees_paid"] = float(account["fees_paid"]) + commission
             cash -= notional + commission
             account["cash"] = max(0.0, cash)
             account["quantity"] = quantity
@@ -81,6 +87,7 @@ def apply_paper_signal(
         fill = close * (1.0 - impact)
         proceeds = quantity * fill
         commission = proceeds * fee
+        account["fees_paid"] = float(account["fees_paid"]) + commission
         entry = float(account["position_entry_price"] or fill)
         cost_basis = float(account["position_entry_cost"] or (quantity * entry))
         realized = proceeds - commission - cost_basis
@@ -122,6 +129,7 @@ def new_account(initial_cash):
         "position_entry_price": None,
         "position_entry_cost": None,
         "realized_pnl": 0.0,
+        "fees_paid": 0.0,
         "trade_count": 0,
         "last_bar": None,
         "ledger": [],

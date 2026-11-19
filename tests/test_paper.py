@@ -52,6 +52,7 @@ def test_entry_fee_is_included_in_realized_pnl():
     account, sell = apply_paper_signal(account, 0, 100, "bar-2", 0.01, 0, 0)
     assert sell["status"] == "sell"
     assert account["realized_pnl"] == pytest.approx(-0.495049504950496)
+    assert account["fees_paid"] == pytest.approx(0.495049504950496)
 
 
 def test_rub_capital_is_converted_to_usd_quote_currency():
@@ -121,3 +122,13 @@ def test_spot_paper_account_rejects_below_minimum_notional():
     assert account["quantity"] == 0
     assert account["cash"] == pytest.approx(100)
     assert account["rejected_min_size"] == 1
+
+
+def test_spot_account_rejects_non_finite_cost_assumptions():
+    account = new_account(25)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        apply_paper_signal(
+            account, 1, 100, "bar-nan",
+            fee_rate=float("nan"), slippage_rate=0, spread_rate=0,
+        )
+

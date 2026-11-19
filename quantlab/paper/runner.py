@@ -379,6 +379,12 @@ def run_paper(cfg):
         "lowest_crypto_min_order_capital_rub": min(crypto_min_capital_requirements) if crypto_min_capital_requirements else 0.0,
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
+        "realized_pnl_rub_estimate": sum(float(row["realized_pnl_rub_estimate"]) for row in snapshots),
+        "unrealized_pnl_rub_estimate": sum(float(row["unrealized_pnl_usd"]) * usd_rub_rate for row in snapshots),
+        "fees_paid_usd": sum(float(row.get("fees_paid_usd", 0.0)) for row in snapshots),
+        "funding_paid_usd": sum(float(row.get("funding_paid_usd", 0.0)) for row in snapshots),
+        "liquidations": sum(int(row.get("liquidations", 0)) for row in snapshots),
+        "rejected_min_size_total": sum(int(row.get("rejected_min_size", 0)) for row in snapshots),
         "accounts": len(snapshots),
         "fills_this_run": sum(
             event.get("status") in ("buy", "sell", "open", "close", "liquidation")
