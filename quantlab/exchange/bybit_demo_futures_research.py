@@ -1,4 +1,4 @@
-"""Research-only backtests for isolated Bybit Demo linear futures data."""
+"""Research-only long-only and long/short Bybit Demo futures backtests."""
 from __future__ import annotations
 
 import json
@@ -7,17 +7,156 @@ from pathlib import Path
 import pandas as pd
 
 from quantlab.futures.engine import simulate_isolated_long
+from quantlab.futures.long_short import simulate_isolated_long_short
 from quantlab.strategies import build_signals
 
 STRATEGIES = (
     "ema_signal", "rsi_signal", "bb_signal", "donchian_signal",
     "sma_signal", "macd_signal", "roc_signal",
 )
+DIRECTION_COLUMNS = {
+    "ema_signal": "ema_direction",
+    "rsi_signal": "rsi_direction",
+    "bb_signal": "bb_direction",
+    "donchian_signal": "donchian_direction",
+    "sma_signal": "sma_direction",
+    "macd_signal": "macd_direction",
+    "roc_signal": "roc_direction",
+}
 REQUIRED = {
     "timestamp", "open", "high", "low", "close", "volume",
     "funding_rate", "funding_settlement_utc", "min_order_size",
     "min_notional_usd", "qty_step", "tick_size", "max_leverage",
 }
+
+
+def _build_direction_signals(enriched):
+    data = enriched.copy()
+    close = data["close"].astype(float)
+
+    def binary_direction(left, right):
+        direction = pd.Series(0, index=data.index, dtype=int)
+        valid = left.notna() & right.notna()
+        direction.loc[valid] = left.loc[valid].gt(right.loc[valid]).map(
+            {True: 1, False: -1}
+        )
+        return direction
+
+    data["ema_direction"] = binary_direction(data["ema_fast"], data["ema_slow"])
+    data["sma_direction"] = binary_direction(data["sma_fast"], data["sma_slow"])
+    data["macd_direction"] = binary_direction(
+        data["macd_line"], data["macd_signal_line"]
+    )
+
+    roc = data["roc_12"]
+    data["roc_direction"] = pd.Series(0, index=data.index, dtype=int)
+    valid_roc = roc.notna()
+    data.loc[valid_roc, "roc_direction"] = roc.loc[valid_roc].gt(0).map(
+        {True: 1, False: -1}
+    )
+
+    data["rsi_direction"] = 0
+    data.loc[data["rsi"] < 30, "rsi_direction"] = 1
+    data.loc[data["rsi"] > 70, "rsi_direction"] = -1
+
+    data["bb_upper"] = data["bb_mid"] + 2 * data["bb_std"]
+    data["bb_direction"] = 0
+    data.loc[close < data["bb_lower"], "bb_direction"] = 1
+    data.loc[close > data["bb_upper"], "bb_direction"] = -1
+
+    data["donchian_lower_prev"] = data["low"].rolling(20).min().shift(1)
+    data["donchian_direction"] = 0
+    data.loc[close > data["donchian_upper_prev"], "donchian_direction"] = 1
+    data.loc[close < data["donchian_lower_prev"], "donchian_direction"] = -1
+    return data
+
+
+def _walk_forward_rows(result, path, symbol, strategy, train_bars, test_bars):
+    rows = []
+    period_returns = result["equity"].pct_change().fillna(0.0)
+    fold_number = 0
+    for test_start in range(train_bars, len(result), test_bars):
+        test_end = min(test_start + test_bars, len(result))
+        returns_window = period_returns.iloc[test_start:test_end].astype(float)
+        if returns_window.empty:
+            continue
+        fold_number += 1
+        start_equity = float(result["equity"].iloc[test_start - 1])
+        end_equity = float(result["equity"].iloc[test_end - 1])
+        if start_equity > 0:
+            normalized = start_equity * (1.0 + returns_window).cumprod()
+            fold_return = (end_equity / start_equity - 1.0) * 100.0
+            curve = pd.concat(
+                [pd.Series([start_equity]), normalized.reset_index(drop=True)],
+                ignore_index=True,
+            )
+            drawdown = curve / curve.cummax() - 1.0
+        else:
+            fold_return = -100.0
+            drawdown = pd.Series([-1.0])
+        std_window = returns_window.std(ddof=1)
+        sharpe = (
+            float(returns_window.mean() / std_window * (8760 ** 0.5))
+            if pd.notna(std_window) and std_window > 0 else 0.0
+        )
+        rows.append({
+            "dataset": path.name,
+            "symbol": symbol,
+            "strategy": strategy,
+            "fold": fold_number,
+            "train_observations": int(test_start),
+            "test_observations": int(test_end - test_start),
+            "test_start_index": int(test_start),
+            "test_end_index_exclusive": int(test_end),
+            "test_return_pct": float(fold_return),
+            "test_max_drawdown_pct": float(drawdown.min() * 100.0),
+            "test_sharpe_annualized": sharpe,
+            "test_liquidations": int(result["liquidated"].iloc[test_start:test_end].sum()),
+            "test_funding_paid_quote": float(
+                result["funding_payment"].iloc[test_start:test_end].sum()
+            ),
+        })
+    return rows
+
+
+def _rank_walk_forward(rows):
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return []
+    ranking = (
+        frame.groupby(["symbol", "strategy"], as_index=False)
+        .agg(
+            folds=("fold", "count"),
+            median_test_return_pct=("test_return_pct", "median"),
+            mean_test_return_pct=("test_return_pct", "mean"),
+            positive_fold_pct=("test_return_pct", lambda values: float((values > 0).mean() * 100.0)),
+            median_test_max_drawdown_pct=("test_max_drawdown_pct", "median"),
+            median_test_sharpe_annualized=("test_sharpe_annualized", "median"),
+            total_test_liquidations=("test_liquidations", "sum"),
+        )
+        .sort_values(["symbol", "median_test_return_pct"], ascending=[True, False])
+    )
+    return ranking.to_dict(orient="records")
+
+
+def _enrich_metrics(metrics, result, frame, settlements, initial_cash):
+    returns = result["equity"].pct_change().fillna(0.0)
+    std = returns.std(ddof=1)
+    metrics["sharpe_annualized_rough"] = (
+        float(returns.mean() / std * (8760 ** 0.5))
+        if pd.notna(std) and std > 0 else 0.0
+    )
+    metrics["final_equity_usdt"] = float(result["equity"].iloc[-1])
+    metrics["buy_hold_return_pct"] = float(
+        (frame["close"].iloc[-1] / frame["close"].iloc[0] - 1.0) * 100.0
+    )
+    metrics["excess_return_pct"] = metrics["total_return_pct"] - metrics["buy_hold_return_pct"]
+    metrics["funding_settlements_in_data"] = int(settlements.sum())
+    metrics["funding_charges_applied"] = int(
+        (result["funding_payment"].abs() > 0).sum()
+    )
+    metrics["initial_cash_usdt"] = float(initial_cash)
+    return metrics
 
 
 def run_bybit_demo_futures_backtests(
@@ -38,7 +177,9 @@ def run_bybit_demo_futures_backtests(
     if not paths:
         raise RuntimeError("No isolated Bybit Demo futures datasets found.")
 
-    summary_rows, walk_forward_rows, dataset_checks = [], [], []
+    summary_rows, walk_forward_rows = [], []
+    long_short_summary_rows, long_short_walk_forward_rows = [], []
+    dataset_checks = []
     for path in paths:
         frame = pd.read_csv(path)
         frame.columns = [str(column).lower() for column in frame.columns]
@@ -82,6 +223,7 @@ def run_bybit_demo_futures_backtests(
             raise RuntimeError(f"{path.name}: funding settlement does not match candle close")
 
         enriched = build_signals(frame)
+        directional = _build_direction_signals(enriched)
         symbol = path.name.removeprefix("bybit_demo_linear_").removesuffix("_60.csv")
         dataset_checks.append({
             "symbol": symbol,
@@ -110,101 +252,64 @@ def run_bybit_demo_futures_backtests(
                 maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
                 liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
             )
-            returns = result["equity"].pct_change().fillna(0.0)
-            std = returns.std(ddof=1)
-            metrics["sharpe_annualized_rough"] = (
-                float(returns.mean() / std * (8760 ** 0.5))
-                if pd.notna(std) and std > 0 else 0.0
-            )
-            metrics["final_equity_usdt"] = float(result["equity"].iloc[-1])
-            metrics["buy_hold_return_pct"] = float(
-                (frame["close"].iloc[-1] / frame["close"].iloc[0] - 1.0) * 100.0
-            )
-            metrics["excess_return_pct"] = (
-                metrics["total_return_pct"] - metrics["buy_hold_return_pct"]
-            )
-            metrics["funding_settlements_in_data"] = int(settlements.sum())
-            metrics["funding_charges_applied"] = int(
-                (result["funding_payment"].abs() > 0).sum()
-            )
+            metrics = _enrich_metrics(metrics, result, frame, settlements, initial_cash)
             summary_rows.append({
+                "dataset": path.name, "symbol": symbol, "strategy": strategy, **metrics
+            })
+            walk_forward_rows.extend(
+                _walk_forward_rows(result, path, symbol, strategy, train_bars, test_bars)
+            )
+
+            direction_column = DIRECTION_COLUMNS[strategy]
+            ls_result, ls_metrics = simulate_isolated_long_short(
+                directional,
+                signal_col=direction_column,
+                funding_col="funding_rate",
+                initial_cash=initial_cash,
+                leverage=float(futures_cfg["leverage"]),
+                max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                fee_rate=float(futures_cfg["fee_rate"]),
+                slippage_rate=float(futures_cfg["slippage_rate"]),
+                spread_rate=float(futures_cfg["spread_rate"]),
+                maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+            )
+            ls_metrics = _enrich_metrics(
+                ls_metrics, ls_result, frame, settlements, initial_cash
+            )
+            long_short_summary_rows.append({
                 "dataset": path.name,
                 "symbol": symbol,
                 "strategy": strategy,
-                "initial_cash_usdt": initial_cash,
-                **metrics,
+                "direction_column": direction_column,
+                **ls_metrics,
             })
-            # Reuse the just-computed equity curve instead of simulating every
-            # strategy a second time solely to calculate chronological OOS folds.
-            period_returns = result["equity"].pct_change().fillna(0.0)
-            fold_number = 0
-            for test_start in range(train_bars, len(result), test_bars):
-                test_end = min(test_start + test_bars, len(result))
-                returns_window = period_returns.iloc[test_start:test_end].astype(float)
-                if returns_window.empty:
-                    continue
-                fold_number += 1
-                start_equity = float(result["equity"].iloc[test_start - 1])
-                end_equity = float(result["equity"].iloc[test_end - 1])
-                if start_equity > 0:
-                    normalized = start_equity * (1.0 + returns_window).cumprod()
-                    fold_return = (end_equity / start_equity - 1.0) * 100.0
-                    curve = pd.concat(
-                        [pd.Series([start_equity]), normalized.reset_index(drop=True)],
-                        ignore_index=True,
-                    )
-                    drawdown = curve / curve.cummax() - 1.0
-                else:
-                    fold_return = -100.0
-                    drawdown = pd.Series([-1.0])
-                std_window = returns_window.std(ddof=1)
-                sharpe = (
-                    float(returns_window.mean() / std_window * (8760 ** 0.5))
-                    if pd.notna(std_window) and std_window > 0 else 0.0
+            long_short_walk_forward_rows.extend(
+                _walk_forward_rows(
+                    ls_result, path, symbol, strategy, train_bars, test_bars
                 )
-                walk_forward_rows.append({
-                    "dataset": path.name,
-                    "symbol": symbol,
-                    "strategy": strategy,
-                    "fold": fold_number,
-                    "train_observations": int(test_start),
-                    "test_observations": int(test_end - test_start),
-                    "test_start_index": int(test_start),
-                    "test_end_index_exclusive": int(test_end),
-                    "test_return_pct": float(fold_return),
-                    "test_max_drawdown_pct": float(drawdown.min() * 100.0),
-                    "test_sharpe_annualized": sharpe,
-                    "test_liquidations": int(result["liquidated"].iloc[test_start:test_end].sum()),
-                    "test_funding_paid_quote": float(
-                        result["funding_payment"].iloc[test_start:test_end].sum()
-                    ),
-                })
+            )
 
     summary = pd.DataFrame(summary_rows)
     walk_forward = pd.DataFrame(walk_forward_rows)
+    long_short_summary = pd.DataFrame(long_short_summary_rows)
+    long_short_walk_forward = pd.DataFrame(long_short_walk_forward_rows)
     summary_path = report_dir / "bybit_demo_futures_backtest_summary.csv"
     walk_forward_path = report_dir / "bybit_demo_futures_walk_forward.csv"
+    long_short_summary_path = report_dir / "bybit_demo_futures_long_short_summary.csv"
+    long_short_walk_forward_path = report_dir / "bybit_demo_futures_long_short_walk_forward.csv"
     summary.to_csv(summary_path, index=False)
     walk_forward.to_csv(walk_forward_path, index=False)
-    if not walk_forward.empty:
-        ranking_frame = (
-            walk_forward.groupby(["symbol", "strategy"], as_index=False)
-            .agg(
-                folds=("fold", "count"),
-                median_test_return_pct=("test_return_pct", "median"),
-                mean_test_return_pct=("test_return_pct", "mean"),
-                positive_fold_pct=("test_return_pct", lambda values: float((values > 0).mean() * 100.0)),
-                median_test_max_drawdown_pct=("test_max_drawdown_pct", "median"),
-                median_test_sharpe_annualized=("test_sharpe_annualized", "median"),
-                total_test_liquidations=("test_liquidations", "sum"),
-            )
-            .sort_values(["symbol", "median_test_return_pct"], ascending=[True, False])
-        )
-        walk_forward_ranking = ranking_frame.to_dict(orient="records")
-    else:
-        walk_forward_ranking = []
+    long_short_summary.to_csv(long_short_summary_path, index=False)
+    long_short_walk_forward.to_csv(long_short_walk_forward_path, index=False)
 
     strategy_results = summary[[
+        "symbol", "strategy", "total_return_pct", "max_drawdown_pct",
+        "closed_trades", "liquidations", "rejected_min_size",
+        "rejected_min_notional", "funding_paid_quote", "fees_quote",
+        "final_equity_usdt", "buy_hold_return_pct", "excess_return_pct",
+    ]].to_dict(orient="records")
+    long_short_strategy_results = long_short_summary[[
         "symbol", "strategy", "total_return_pct", "max_drawdown_pct",
         "closed_trades", "liquidations", "rejected_min_size",
         "rejected_min_notional", "funding_paid_quote", "fees_quote",
@@ -220,13 +325,21 @@ def run_bybit_demo_futures_backtests(
         "initial_cash_usdt_per_strategy": initial_cash,
         "capital_note": "Research normalization only; not a statement of funded account balance.",
         "strategies_tested": list(strategies),
+        "trading_modes": ["long_only", "long_short"],
         "dataset_count": len(dataset_checks),
         "backtest_rows": len(summary_rows),
         "walk_forward_folds": len(walk_forward_rows),
+        "long_short_backtest_rows": len(long_short_summary_rows),
+        "long_short_walk_forward_folds": len(long_short_walk_forward_rows),
         "datasets": dataset_checks,
         "strategy_results": strategy_results,
-        "walk_forward_ranking": walk_forward_ranking,
-        "outputs": [str(summary_path), str(walk_forward_path)],
+        "walk_forward_ranking": _rank_walk_forward(walk_forward_rows),
+        "long_short_strategy_results": long_short_strategy_results,
+        "long_short_walk_forward_ranking": _rank_walk_forward(long_short_walk_forward_rows),
+        "outputs": [
+            str(summary_path), str(walk_forward_path),
+            str(long_short_summary_path), str(long_short_walk_forward_path),
+        ],
         "demo_orders_submitted": 0,
         "real_orders_submitted": 0,
         "paper_engine_integration": False,
