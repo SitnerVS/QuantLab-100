@@ -126,6 +126,7 @@ def _snapshot_spot(account, latest, sleeve, key, bar_time, allocation_rub, usd_r
         "unrealized_pnl_usd": unrealized,
         "funding_paid_usd": 0.0,
         "fees_paid_usd": float(account.get("fees_paid", 0.0)),
+        "rejected_min_size": int(account.get("rejected_min_size", 0)),
         "liquidations": 0,
         "closed_trades": int(account["trade_count"] // 2),
         "trade_count": int(account["trade_count"]),
@@ -180,11 +181,11 @@ def run_paper(cfg):
         state = {"created_at": now.isoformat(), "accounts": {}}
 
     # Reset pre-futures state and spot accounts after correcting signal timing.
-    if int(state.get("schema_version", 1)) < 7:
+    if int(state.get("schema_version", 1)) < 8:
         state["accounts"] = {}
         state["created_at"] = now.isoformat()
         state["experiment_id"] = "quantlab-100-paper-72h-v1"
-    state["schema_version"] = 7
+    state["schema_version"] = 8
     state.setdefault("experiment_id", "quantlab-100-paper-72h-v1")
     state.setdefault("accounts", {})
     experiment = _experiment_window(state["created_at"], now, duration_hours=72)
@@ -296,6 +297,8 @@ def run_paper(cfg):
                         slippage_rate=float(costs["slippage_rate"]),
                         spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
                         max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                        min_order_size=float(latest.get("min_order_size", 0.0)) if sleeve == "crypto_spot" else 0.0,
+                        min_notional=float(latest.get("min_notional_usd", 0.0)) if sleeve == "crypto_spot" else 0.0,
                     )
                 snapshot = _snapshot_spot(
                     account, latest, sleeve, key, bar_time,
@@ -318,9 +321,18 @@ def run_paper(cfg):
     minimum_lot_blocked_rub = sum(
         float(account.get("initial_capital_rub", 0.0))
         for key, account in state["accounts"].items()
-        if key.startswith("futures_")
+        if (key.startswith("futures_") or key.startswith("crypto_"))
         and int(account.get("rejected_min_size", 0)) > 0
-        and account.get("position") is None
+        and (
+            account.get("position") is None
+            if key.startswith("futures_")
+            else float(account.get("quantity", 0.0)) <= 0
+        )
+    )
+    fx_proxy_capital_rub = sum(
+        float(account.get("initial_capital_rub", 0.0))
+        for key, account in state["accounts"].items()
+        if key.startswith("forex_")
     )
     total_capital_rub = float(cfg["capital"]["total_rub"])
     summary = pd.DataFrame([{
@@ -340,6 +352,7 @@ def run_paper(cfg):
         "inactive_capital_rub": max(0.0, total_capital_rub - active_initial_rub),
         "minimum_lot_blocked_capital_rub": minimum_lot_blocked_rub,
         "tradable_paper_capital_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
+        "fx_proxy_capital_rub": fx_proxy_capital_rub,
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
         "accounts": len(snapshots),
