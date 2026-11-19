@@ -38,6 +38,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
             "rows": 0,
             "duplicate_timestamps": None,
             "missing_ohlcv_rows": None,
+            "missing_volume_rows": None,
             "invalid_ohlc_rows": None,
             "max_gap_hours": None,
             "last_bar_age_hours": None,
@@ -48,7 +49,8 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     frame = pd.read_csv(path)
     frame.columns = [str(col).lower() for col in frame.columns]
     time_col = next((c for c in ("timestamp", "datetime", "date") if c in frame.columns), None)
-    if time_col is None or not set(OHLCV).issubset(frame.columns):
+    required_columns = OHLCV if market_type == "crypto" else ["open", "high", "low", "close"]
+    if time_col is None or not set(required_columns).issubset(frame.columns):
         return {
             "dataset": path.name,
             "market_type": market_type,
@@ -66,16 +68,18 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     parsed = pd.to_datetime(frame[time_col], utc=True, errors="coerce")
     valid_times = parsed.dropna().sort_values()
     duplicates = int(parsed.duplicated().sum())
-    missing = int(frame[OHLCV].isna().any(axis=1).sum())
-    numeric = frame[OHLCV].apply(pd.to_numeric, errors="coerce")
+    missing = int(frame[required_columns].isna().any(axis=1).sum())
+    missing_volume = int(frame["volume"].isna().sum()) if "volume" in frame.columns else int(len(frame))
+    numeric = frame[["open", "high", "low", "close"]].apply(pd.to_numeric, errors="coerce")
     invalid = (
         (numeric["high"] < numeric[["open", "close"]].max(axis=1))
         | (numeric["low"] > numeric[["open", "close"]].min(axis=1))
         | (numeric["high"] < numeric["low"])
         | (numeric["close"] <= 0)
-        | (numeric["volume"] < 0)
     )
     invalid_rows = int(invalid.fillna(True).sum())
+    if market_type == "crypto" and "volume" in frame.columns:
+        invalid_rows += int((pd.to_numeric(frame["volume"], errors="coerce") < 0).fillna(True).sum())
 
     gaps = valid_times.diff().dropna().dt.total_seconds() / 3600
     max_gap = float(gaps.max()) if not gaps.empty else 0.0
@@ -101,6 +105,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
         "rows": int(len(frame)),
         "duplicate_timestamps": duplicates,
         "missing_ohlcv_rows": missing,
+        "missing_volume_rows": missing_volume,
         "invalid_ohlc_rows": invalid_rows,
         "max_gap_hours": max_gap,
         "last_bar_age_hours": age_hours,
