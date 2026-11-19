@@ -71,10 +71,12 @@ def download_crypto(cfg):
         safe_symbol = symbol.replace("/", "_")
         try:
             market = exchange.market(symbol)
-            limits = market.get("limits", {})
-            info = market.get("info", {})
-            min_order_size = limits.get("amount", {}).get("min") or info.get("ordermin")
-            min_notional = limits.get("cost", {}).get("min") or info.get("costmin") or 0.0
+            limits = market.get("limits") or {}
+            info = market.get("info") or {}
+            amount_limits = limits.get("amount") or {}
+            cost_limits = limits.get("cost") or {}
+            min_order_size = amount_limits.get("min") or info.get("ordermin")
+            min_notional = cost_limits.get("min") or info.get("costmin") or 0.0
             if min_order_size is None or float(min_order_size) <= 0:
                 raise RuntimeError(f"minimum order quantity is unavailable for {symbol}")
             rows = exchange.fetch_ohlcv(
