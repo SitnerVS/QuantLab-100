@@ -96,3 +96,74 @@ def summarize_walk_forward(rows):
         ["dataset", "median_test_return_pct"],
         ascending=[True, False],
     ).reset_index(drop=True)
+
+
+def walk_forward_futures_evaluate(
+    frame,
+    signal_col,
+    futures_cfg,
+    train_bars=180,
+    test_bars=60,
+    fee_rate=0.0006,
+    slippage_rate=0.0005,
+    spread_rate=0.0,
+    initial_cash=100.0,
+):
+    """Chronological OOS folds for the isolated-margin simulator."""
+    from quantlab.futures.engine import simulate_isolated_long
+
+    if train_bars < 2 or test_bars < 1:
+        raise ValueError("train_bars must be >= 2 and test_bars must be >= 1")
+    if len(frame) <= train_bars:
+        return []
+
+    result, _ = simulate_isolated_long(
+        frame,
+        signal_col=signal_col,
+        funding_col="funding_rate",
+        initial_cash=initial_cash,
+        leverage=float(futures_cfg["leverage"]),
+        max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+        fee_rate=fee_rate,
+        slippage_rate=slippage_rate,
+        spread_rate=spread_rate,
+        maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+        liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+    )
+    period_returns = result["equity"].pct_change().fillna(0.0)
+    rows = []
+    fold = 0
+    for test_start in range(train_bars, len(result), test_bars):
+        test_end = min(test_start + test_bars, len(result))
+        returns = period_returns.iloc[test_start:test_end].astype(float)
+        if returns.empty:
+            continue
+        fold += 1
+        start_equity = float(result["equity"].iloc[test_start - 1])
+        end_equity = float(result["equity"].iloc[test_end - 1])
+        if start_equity > 0:
+            normalized = start_equity * (1.0 + returns).cumprod()
+            fold_return = (end_equity / start_equity - 1.0) * 100.0
+            curve = pd.concat(
+                [pd.Series([start_equity]), normalized.reset_index(drop=True)],
+                ignore_index=True,
+            )
+            drawdown = curve / curve.cummax() - 1.0
+        else:
+            fold_return = -100.0
+            drawdown = pd.Series([-1.0])
+        std = returns.std(ddof=1)
+        sharpe = float(returns.mean() / std * (8760 ** 0.5)) if pd.notna(std) and std > 0 else 0.0
+        rows.append({
+            "fold": fold,
+            "train_observations": int(test_start),
+            "test_observations": int(test_end - test_start),
+            "test_start_index": int(test_start),
+            "test_end_index_exclusive": int(test_end),
+            "test_return_pct": float(fold_return),
+            "test_max_drawdown_pct": float(drawdown.min() * 100.0),
+            "test_sharpe_annualized": sharpe,
+            "test_liquidations": int(result["liquidated"].iloc[test_start:test_end].sum()),
+            "test_funding_paid_quote": float(result["funding_payment"].iloc[test_start:test_end].sum()),
+        })
+    return rows
