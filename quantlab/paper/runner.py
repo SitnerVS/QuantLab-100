@@ -151,6 +151,7 @@ def run_paper(cfg):
                 fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
                 slippage_rate=float(costs["slippage_rate"]),
                 spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
+                max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
             )
             state["accounts"][key] = account
             events.append({"dataset": key, "sleeve": sleeve, **event})
