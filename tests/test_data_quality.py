@@ -26,6 +26,8 @@ def test_valid_dataset_passes_schema_and_ohlc_checks(tmp_path):
         "low": [99.0] * 60,
         "close": [101.0] * 60,
         "volume": [10.0] * 60,
+        "min_order_size": [0.0001] * 60,
+        "min_notional_usd": [0.5] * 60,
     })
     frame.to_csv(path, index=False)
     result = analyze_dataset(
@@ -50,6 +52,8 @@ def test_future_dated_candles_are_flagged(tmp_path):
         "low": [99.0] * 60,
         "close": [101.0] * 60,
         "volume": [10.0] * 60,
+        "min_order_size": [0.0001] * 60,
+        "min_notional_usd": [0.5] * 60,
     })
     frame.to_csv(path, index=False)
     result = analyze_dataset(
