@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T21:13:09.555285+00:00
+Updated (UTC): 2026-11-19T21:39:50.199787+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 7.70 h; remaining: 64.30 h
+Elapsed: 8.14 h; remaining: 63.86 h
 
 ## Target
 
@@ -27,7 +27,7 @@ Elapsed: 7.70 h; remaining: 64.30 h
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
 - Equity: 99.5788 RUB; total return: -0.42116%
-- Active return: -0.56155%; fills this run: 2; open positions: 0; closed trades: 6
+- Active return: -0.56155%; fills this run: 0; open positions: 0; closed trades: 6
 - Fees paid: 0.00057215 USD; funding paid (net sign as recorded): -0.00000123 USD
 - Liquidations: 0
 
