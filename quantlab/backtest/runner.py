@@ -14,8 +14,15 @@ def run_backtests(cfg):
     REPORTS.mkdir(parents=True, exist_ok=True)
     rows = []
     walk_forward_rows = []
+    quality_path = REPORTS / "data_quality.csv"
+    quality = pd.read_csv(quality_path) if quality_path.exists() else pd.DataFrame()
+    valid_names = set(
+        quality.loc[quality["status"].isin(["OK", "STALE"]), "dataset"].astype(str)
+    ) if not quality.empty else set()
+    if not valid_names:
+        raise RuntimeError("No datasets passed the data quality gate.")
 
-    for path in sorted(RAW.glob("*.csv")):
+    for path in sorted(p for p in RAW.glob("*.csv") if p.name in valid_names):
         try:
             frame = pd.read_csv(path)
             frame.columns = [str(col).lower() for col in frame.columns]
