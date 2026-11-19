@@ -125,7 +125,7 @@ def test_futures_dataset_requires_funding_rate(tmp_path):
         path,
         "1h",
         "futures",
-        now=datetime(2026, 1, 3, tzinfo=timezone.utc),
+        now=datetime(2026, 1, 4, tzinfo=timezone.utc),
     )
     assert result["status"] == "OK"
     assert result["missing_funding_rows"] == 0
