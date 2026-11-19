@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - .github/workflows/bybit-demo-self-hosted.yml
+      - quantlab/exchange/bybit_demo.py
+      - quantlab/exchange/bybit_market_data.py
+      - quantlab/exchange/bybit_demo_futures.py
 
 permissions:
   contents: read
