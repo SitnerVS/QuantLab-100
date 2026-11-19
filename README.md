@@ -5,7 +5,8 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 ## Current capabilities
 - Public historical market data: Binance spot OHLCV through CCXT; Yahoo Finance FX proxy data through yfinance.
 - EMA, RSI, Bollinger and Donchian signal families for baseline research.
-- Long/flat historical backtest with configurable fees and slippage.
+- Long/flat historical backtest with configurable fees and slippage, buy-and-hold benchmark, drawdown, annualized rough Sharpe, bar-level profit factor and win rate.
+- Rolling chronological out-of-sample test windows for fixed causal signals; these are evaluation folds, not parameter optimization.
 - Stateful cash-only virtual spot accounts for crypto and FX proxy datasets: buys, sells, cash, quantity, equity, realized and unrealized PnL.
 - Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
 - GitHub Actions runs tests and research on pushes to main and hourly (UTC).
@@ -16,7 +17,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - The FX symbols from Yahoo Finance are research proxies, not broker-grade executable bid/ask data. In particular, JPY=X is not a broker-specific USD/JPY feed.
 - Paper fills use completed-bar close as a reference price plus conservative fee/spread/slippage adjustments. They are not order-book fills and do not model latency or partial fills.
 - Current paper strategy is EMA trend only. The other signal families are research candidates, not automatically traded.
-- The historical backtester remains a simplified baseline; it does not yet implement full walk-forward validation, bootstrap confidence intervals or multiple-testing correction.
+- Walk-forward folds currently evaluate fixed strategy rules and do not optimize parameters. Bootstrap confidence intervals, multiple-testing correction and robust strategy-selection controls remain future work.
 - Small balances may be below real exchange minimum order sizes. All balances and fills are virtual.
 
 ## Run locally
