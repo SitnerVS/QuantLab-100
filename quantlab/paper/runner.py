@@ -159,6 +159,7 @@ def run_paper(cfg):
                 "dataset": key,
                 "sleeve": sleeve,
                 "bar_time_utc": bar_time,
+                "initial_capital_rub": float(account.get("initial_capital_rub", 0.0)),
                 "close": float(latest["close"]),
                 "signal": signal,
                 "cash_usd": float(account["cash"]),
@@ -168,7 +169,7 @@ def run_paper(cfg):
                 "usd_rub_rate": usd_rub_rate,
                 "realized_pnl_usd": float(account["realized_pnl"]),
                 "realized_pnl_rub_estimate": float(account["realized_pnl"]) * usd_rub_rate,
-                "unrealized_pnl": (
+                "unrealized_pnl_usd": (
                     float(account["quantity"]) * (float(latest["close"]) - float(account["position_entry_price"]))
                     if account["quantity"] > 0 and account["position_entry_price"] is not None else 0.0
                 ),
@@ -182,4 +183,22 @@ def run_paper(cfg):
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     pd.DataFrame(events).to_csv(REPORTS / "paper_events_latest.csv", index=False)
     pd.DataFrame(snapshots).to_csv(REPORTS / "paper_portfolio_latest.csv", index=False)
+
+    active_initial_rub = sum(row["initial_capital_rub"] for row in snapshots)
+    total_equity_rub = sum(row["equity_rub_estimate"] for row in snapshots)
+    total_capital_rub = float(cfg["capital"]["total_rub"])
+    summary = pd.DataFrame([{
+        "timestamp_utc": now.isoformat(),
+        "base_currency": "RUB",
+        "usd_rub_rate": usd_rub_rate,
+        "usd_rub_rate_timestamp_utc": fx_timestamp,
+        "active_initial_capital_rub": active_initial_rub,
+        "inactive_capital_rub": max(0.0, total_capital_rub - active_initial_rub),
+        "active_equity_rub_estimate": total_equity_rub,
+        "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
+        "accounts": len(snapshots),
+        "fills_this_run": sum(e.get("status") in ("buy", "sell") for e in events),
+        "real_orders": False,
+    }])
+    summary.to_csv(REPORTS / "paper_portfolio_summary.csv", index=False)
     print(f"Paper engine: {len(snapshots)} accounts scanned; {sum(e.get('status') in ('buy', 'sell') for e in events)} fills; no real orders.")
