@@ -351,7 +351,7 @@ def run_paper(cfg):
         "active_initial_capital_rub": active_initial_rub,
         "inactive_capital_rub": max(0.0, total_capital_rub - active_initial_rub),
         "minimum_lot_blocked_capital_rub": minimum_lot_blocked_rub,
-        "tradable_paper_capital_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
+        "capital_not_blocked_by_crypto_minimums_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
         "fx_proxy_capital_rub": fx_proxy_capital_rub,
         "active_equity_rub_estimate": total_equity_rub,
         "active_return_pct": ((total_equity_rub / active_initial_rub) - 1.0) * 100.0 if active_initial_rub else 0.0,
