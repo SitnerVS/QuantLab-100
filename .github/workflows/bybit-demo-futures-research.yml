@@ -1,0 +1,74 @@
+name: Bybit Demo Futures research (hosted Python 3.11)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/bybit-demo-futures-research.yml
+  workflow_run:
+    workflows: ["Bybit Demo connection and market data (self-hosted EU runner)"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bybit-demo-futures-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout trusted main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run complete test suite
+        run: python -m pytest -q
+
+      - name: Verify Bybit Demo API connection (read-only)
+        env:
+          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
+          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
+        run: python -m quantlab.exchange.cli
+
+      - name: Download Bybit Demo perpetual mark and funding data (read-only)
+        env:
+          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
+          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
+        run: python -m quantlab.exchange.bybit_demo_futures_cli
+
+      - name: Run isolated-margin futures research backtests
+        run: python -m quantlab.exchange.bybit_demo_futures_research_cli --config config/settings.yaml
+
+      - name: Upload Bybit Demo futures research outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bybit-demo-futures-research-${{ github.run_number }}
+          path: |
+            data/bybit_demo/bybit_demo_linear_*.csv
+            reports/bybit_demo_futures_data.json
+            reports/bybit_demo_futures_backtest.json
+            reports/bybit_demo_futures_backtest_summary.csv
+            reports/bybit_demo_futures_walk_forward.csv
+          if-no-files-found: warn
+          retention-days: 14
