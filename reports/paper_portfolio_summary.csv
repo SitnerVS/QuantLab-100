@@ -1,0 +1,2 @@
+timestamp_utc,base_currency,usd_rub_rate,usd_rub_rate_timestamp_utc,active_initial_capital_rub,inactive_capital_rub,active_equity_rub_estimate,active_return_pct,accounts,fills_this_run,real_orders
+2026-11-19T12:58:26.819305+00:00,RUB,82.04740905761719,2026-11-18T00:00:00+00:00,62.5,37.5,62.46814720401744,-0.05096447357209044,5,3,False
