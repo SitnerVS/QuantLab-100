@@ -12,7 +12,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 
 ## Important model boundaries
 - The 100 RUB to 10,000 RUB in 72 hours objective is an extreme experimental target, not a forecast or promise.
-- Four sleeves are budgeted at 25 RUB each. Only crypto spot and FX proxy sleeves are currently enabled in the paper engine. Futures and leveraged sleeves are explicitly disabled until a separately tested margin, funding, mark-price and liquidation model exists.
+- Four sleeves are budgeted at 25 RUB each. Enabled crypto spot and EUR/USD + GBP/USD proxy accounts convert their RUB allocation to USD using the latest completed Yahoo Finance USD/RUB (RUB=X) daily close. Portfolio snapshots show USD balances and an estimated RUB equivalent. JPY=X (USD/JPY) is research-only because its quote currency differs. Futures and leveraged sleeves are explicitly disabled until a separately tested margin, funding, mark-price and liquidation model exists.
 - The FX symbols from Yahoo Finance are research proxies, not broker-grade executable bid/ask data. In particular, JPY=X is not a broker-specific USD/JPY feed.
 - Paper fills use completed-bar close as a reference price plus conservative fee/spread/slippage adjustments. They are not order-book fills and do not model latency or partial fills.
 - Current paper strategy is EMA trend only. The other signal families are research candidates, not automatically traded.
