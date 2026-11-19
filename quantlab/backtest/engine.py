@@ -8,6 +8,7 @@ def simulate(
     slippage_rate=0.0005,
     initial_cash=100.0,
     periods_per_year=252,
+    spread_rate=0.0,
 ):
     """
     Long/flat close-to-close approximation.
@@ -20,13 +21,13 @@ def simulate(
         raise ValueError(f"Missing columns: {sorted(required - set(data.columns))}")
     if initial_cash <= 0 or periods_per_year <= 0:
         raise ValueError("initial_cash and periods_per_year must be positive")
-    if fee_rate < 0 or slippage_rate < 0:
-        raise ValueError("fee_rate and slippage_rate cannot be negative")
+    if fee_rate < 0 or slippage_rate < 0 or spread_rate < 0:
+        raise ValueError("fee_rate, slippage_rate and spread_rate cannot be negative")
 
     position = data[signal_col].fillna(0).shift(1).fillna(0).clip(0, 1)
     asset_returns = data["close"].astype(float).pct_change().fillna(0)
     turnover = position.diff().abs().fillna(position.abs())
-    transaction_costs = turnover * (float(fee_rate) + float(slippage_rate))
+    transaction_costs = turnover * (float(fee_rate) + float(slippage_rate) + float(spread_rate) / 2.0)
 
     data["position"] = position
     data["asset_return"] = asset_returns
