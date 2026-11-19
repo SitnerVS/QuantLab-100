@@ -68,3 +68,15 @@ def test_crypto_and_fx_datasets_map_to_separate_sleeves():
     assert _dataset_sleeve("forex_GBPUSD=X_1d.csv") == "forex_spot_sim"
     assert _dataset_sleeve("forex_JPY=X_1d.csv") is None
     assert _dataset_sleeve("forex_RUB=X_1d.csv") is None
+
+
+def test_position_fraction_keeps_unallocated_cash():
+    account = new_account(100)
+    account, event = apply_paper_signal(
+        account, 1, 100, "bar-1",
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        max_position_fraction=0.25,
+    )
+    assert event["status"] == "buy"
+    assert account["quantity"] == pytest.approx(0.25)
+    assert account["cash"] == pytest.approx(75.0)
