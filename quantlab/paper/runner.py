@@ -88,9 +88,9 @@ def run_paper(cfg):
         }
 
     # Backward-compatible state migration from the initial signal-only prototype.
-    if int(state.get("schema_version", 1)) < 3:
+    if int(state.get("schema_version", 1)) < 4:
         state["accounts"] = {}
-    state["schema_version"] = 3
+    state["schema_version"] = 4
     state.setdefault("accounts", {})
     state.setdefault("unsupported_sleeves", {
         "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
@@ -112,6 +112,7 @@ def run_paper(cfg):
     snapshots = []
 
     for path in paths:
+        sleeve = _dataset_sleeve(path.name)
         try:
             frame = pd.read_csv(path)
             frame.columns = [str(col).lower() for col in frame.columns]
