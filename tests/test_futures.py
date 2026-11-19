@@ -123,3 +123,27 @@ def test_persistent_futures_account_rejects_below_minimum_quantity():
     assert account["position"] is None
     assert account["wallet"] == pytest.approx(1.0)
     assert account["rejected_min_size"] == 1
+
+
+def test_isolated_futures_backtest_rejects_below_minimum_notional():
+    frame = pd.DataFrame({
+        "close": [100, 100],
+        "signal": [1, 1],
+        "funding_rate": [0.0, 0.0],
+        "min_order_size": [0.001, 0.001],
+        "min_notional_usd": [100.0, 100.0],
+    })
+    result, metrics = simulate_isolated_long(
+        frame,
+        initial_cash=100,
+        leverage=2,
+        max_margin_fraction=0.25,
+        fee_rate=0,
+        slippage_rate=0,
+        spread_rate=0,
+        maintenance_margin_rate=0.05,
+        liquidation_fee_rate=0,
+    )
+    assert result.iloc[-1]["event"] == "below_minimum_notional"
+    assert metrics["rejected_min_notional"] == 1
+    assert result.iloc[-1]["position"] == 0
