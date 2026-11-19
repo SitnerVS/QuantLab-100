@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T17:14:06.249353+00:00
+Updated (UTC): 2026-11-19T17:16:54.434667+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 3.72 h; remaining: 68.28 h
+Elapsed: 3.76 h; remaining: 68.24 h
 
 ## Target
 
@@ -20,14 +20,14 @@ Elapsed: 3.72 h; remaining: 68.28 h
 - Capital blocked by venue minimum lots: 50.00 RUB
 - Lowest configured crypto minimum-order capital: 120.12 RUB; budget shortfall: 20.12 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
-- Cumulative rejected minimum-size orders: 28; new rejections this run: 4
+- Cumulative rejected minimum-size orders: 28; new rejections this run: 0
 
 ## Fractional shadow portfolio — NON-EXECUTABLE
 
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
 - Equity: 99.5870 RUB; total return: -0.41298%
-- Active return: -0.55063%; fills this run: 2; open positions: 4; closed trades: 2
+- Active return: -0.55063%; fills this run: 0; open positions: 4; closed trades: 2
 - Fees paid: 0.00038353 USD; funding paid (net sign as recorded): -0.00000029 USD
 - Liquidations: 0
 
