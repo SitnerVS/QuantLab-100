@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from quantlab.backtest.engine import simulate
-from quantlab.backtest.validation import walk_forward_evaluate
+from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward
 from quantlab.strategies import build_signals
 
 RAW = Path("data/raw")
@@ -64,6 +64,7 @@ def run_backtests(cfg):
 
     pd.DataFrame(rows).to_csv(REPORTS / "backtest_summary.csv", index=False)
     pd.DataFrame(walk_forward_rows).to_csv(REPORTS / "walk_forward_summary.csv", index=False)
+    summarize_walk_forward(walk_forward_rows).to_csv(REPORTS / "walk_forward_ranking.csv", index=False)
     report = pd.DataFrame(rows)
     print(report.to_string(index=False) if not report.empty else "No eligible datasets.")
     print(f"Walk-forward test windows: {len(walk_forward_rows)}")
