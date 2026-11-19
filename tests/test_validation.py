@@ -1,6 +1,6 @@
 import pandas as pd
 
-from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward
+from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward, walk_forward_futures_evaluate
 
 
 def test_walk_forward_windows_are_chronological_and_non_overlapping():
@@ -41,3 +41,30 @@ def test_walk_forward_ranking_uses_test_folds_only():
     assert result["folds"] == 2
     assert result["mean_test_return_pct"] == 0.5
     assert result["positive_fold_pct"] == 50.0
+
+
+def test_futures_walk_forward_uses_margin_and_funding_engine():
+    frame = pd.DataFrame({
+        "close": [100.0] * 8,
+        "signal": [1] * 8,
+        "funding_rate": [0.0] * 8,
+    })
+    cfg = {
+        "leverage": 2.0,
+        "max_margin_fraction": 0.25,
+        "maintenance_margin_rate": 0.01,
+        "liquidation_fee_rate": 0.005,
+    }
+    rows = walk_forward_futures_evaluate(
+        frame,
+        "signal",
+        cfg,
+        train_bars=3,
+        test_bars=2,
+        fee_rate=0,
+        slippage_rate=0,
+        spread_rate=0,
+    )
+    assert len(rows) == 3
+    assert rows[0]["test_observations"] == 2
+    assert rows[0]["test_liquidations"] == 0
