@@ -23,6 +23,8 @@ def simulate_isolated_long(
     required = {"close", signal_col, funding_col}
     if not required.issubset(frame.columns):
         raise ValueError(f"Missing futures columns: {sorted(required - set(frame.columns))}")
+    if frame.empty:
+        raise ValueError("futures frame cannot be empty")
     if initial_cash <= 0 or leverage < 1:
         raise ValueError("initial_cash must be positive and leverage >= 1")
     if not 0 < max_margin_fraction <= 1:
@@ -48,7 +50,8 @@ def simulate_isolated_long(
         if mark <= 0:
             raise ValueError("close/mark prices must be positive")
         signal = int(bool(signals.iloc[index]))
-        funding_rate = float(row[funding_col] or 0.0)
+        funding_value = row[funding_col]
+        funding_rate = 0.0 if pd.isna(funding_value) else float(funding_value)
         event = "hold"
         funding_payment = 0.0
         liquidated = False
