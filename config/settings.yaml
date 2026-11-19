@@ -44,7 +44,8 @@ paper:
 validation:
   train_bars: 180
   test_bars: 60
-\nfutures:
+
+futures:
   leverage: 2.0
   max_margin_fraction: 0.25
   fee_rate: 0.0006
