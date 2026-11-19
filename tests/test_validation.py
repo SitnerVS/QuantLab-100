@@ -1,6 +1,6 @@
 import pandas as pd
 
-from quantlab.backtest.validation import walk_forward_evaluate
+from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward
 
 
 def test_walk_forward_windows_are_chronological_and_non_overlapping():
@@ -28,3 +28,16 @@ def test_walk_forward_windows_are_chronological_and_non_overlapping():
 def test_walk_forward_returns_empty_when_history_is_too_short():
     frame = pd.DataFrame({"close": [100, 101, 102], "signal": [1, 1, 1]})
     assert walk_forward_evaluate(frame, "signal", train_bars=4, test_bars=2) == []
+
+
+def test_walk_forward_ranking_uses_test_folds_only():
+    rows = [
+        {"dataset": "BTC", "strategy": "ema", "fold": 1, "test_return_pct": 2.0,
+         "test_max_drawdown_pct": -1.0, "test_sharpe_annualized": 1.0},
+        {"dataset": "BTC", "strategy": "ema", "fold": 2, "test_return_pct": -1.0,
+         "test_max_drawdown_pct": -2.0, "test_sharpe_annualized": -0.5},
+    ]
+    result = summarize_walk_forward(rows).iloc[0]
+    assert result["folds"] == 2
+    assert result["mean_test_return_pct"] == 0.5
+    assert result["positive_fold_pct"] == 50.0
