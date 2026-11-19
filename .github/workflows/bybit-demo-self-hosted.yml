@@ -2,6 +2,11 @@ name: Bybit Demo connection (self-hosted EU runner)
 
 on:
   workflow_dispatch:
+  # One-time validation path: run automatically when this workflow file changes.
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/bybit-demo-self-hosted.yml
 
 permissions:
   contents: read
