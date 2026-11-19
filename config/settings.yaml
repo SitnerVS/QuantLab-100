@@ -51,5 +51,5 @@ futures:
   fee_rate: 0.0006
   slippage_rate: 0.0005
   spread_rate: 0.0002
-  maintenance_margin_rate: 0.005
-  liquidation_fee_rate: 0.005
+  maintenance_margin_rate: 0.05
+  liquidation_fee_rate: 0.025
