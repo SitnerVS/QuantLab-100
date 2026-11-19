@@ -244,7 +244,9 @@ def fetch_bybit_demo_futures_data(
         "history_days_requested": int(history_days),
         "exchange": "Bybit",
         "environment": "MAINNET_PUBLIC_MARKET_DATA",
-        "market_type": "linear_perpetual",\n        "market_data_endpoint": "api.bytick.com",\n        "source_note": "Unauthenticated mainnet public market data; Bybit documents Demo public market data as identical to mainnet public market data.",
+        "market_type": "linear_perpetual",
+        "market_data_endpoint": "api.bytick.com",
+        "source_note": "Unauthenticated mainnet public market data; Bybit documents Demo public market data as identical to mainnet public market data.",
         "price_basis": "mark",
         "volume_note": "Mark-price kline endpoint does not return traded volume; volume and turnover are zero placeholders.",
         "funding_alignment": "settlement timestamp matched to completed mark-candle close",
@@ -255,5 +257,6 @@ def fetch_bybit_demo_futures_data(
         "status": "FUTURES_DATA_RECEIVED",
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "
+", encoding="utf-8")
     return report
