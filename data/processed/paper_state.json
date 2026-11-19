@@ -10,7 +10,7 @@
       "position_entry_cost": null,
       "realized_pnl": 0.0,
       "trade_count": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -62,6 +62,15 @@
           "equity": 0.1015672941906223,
           "unrealized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 0,
+          "status": "hold",
+          "cash": 0.1015672941906223,
+          "equity": 0.1015672941906223,
+          "unrealized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334,
@@ -76,7 +85,7 @@
       "position_entry_cost": null,
       "realized_pnl": 0.0,
       "trade_count": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -128,10 +137,23 @@
           "equity": 0.1015672941906223,
           "unrealized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "below_minimum_size",
+          "attempted_quantity": 1.4324321461650792e-05,
+          "minimum_quantity": 0.002,
+          "attempted_notional": 0.025325976010029498,
+          "minimum_notional": 0.5,
+          "cash": 0.1015672941906223,
+          "equity": 0.1015672941906223,
+          "unrealized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334,
-      "rejected_min_size": 4,
+      "rejected_min_size": 5,
       "fees_paid": 0.0
     },
     "crypto_SOL_USD_1h": {
@@ -142,7 +164,7 @@
       "position_entry_cost": null,
       "realized_pnl": 0.0,
       "trade_count": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -194,10 +216,23 @@
           "equity": 0.1015672941906223,
           "unrealized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "below_minimum_size",
+          "attempted_quantity": 0.00034587031342317177,
+          "minimum_quantity": 0.05,
+          "attempted_notional": 0.025325976010029498,
+          "minimum_notional": 0.5,
+          "cash": 0.1015672941906223,
+          "equity": 0.1015672941906223,
+          "unrealized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334,
-      "rejected_min_size": 4,
+      "rejected_min_size": 5,
       "fees_paid": 0.0
     },
     "forex_EURUSD=X_1d": {
@@ -255,8 +290,8 @@
       "fees_paid": 0.0,
       "closed_trades": 0,
       "liquidations": 0,
-      "rejected_min_size": 4,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "rejected_min_size": 5,
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -320,6 +355,22 @@
           "equity": 0.1015672941906223,
           "realized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "below_minimum_size",
+          "funding_payment": 0.0,
+          "fee": 0.0,
+          "liquidated": false,
+          "attempted_quantity": 2.8721785145795382e-05,
+          "minimum_quantity": 0.001,
+          "wallet": 0.1015672941906223,
+          "margin_balance": 0.0,
+          "unrealized_pnl": 0.0,
+          "equity": 0.1015672941906223,
+          "realized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334
@@ -333,8 +384,8 @@
       "fees_paid": 0.0,
       "closed_trades": 0,
       "liquidations": 0,
-      "rejected_min_size": 4,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "rejected_min_size": 5,
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -398,6 +449,22 @@
           "equity": 0.1015672941906223,
           "realized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "below_minimum_size",
+          "funding_payment": 0.0,
+          "fee": 0.0,
+          "liquidated": false,
+          "attempted_quantity": 0.0006933264638644584,
+          "minimum_quantity": 0.01,
+          "wallet": 0.1015672941906223,
+          "margin_balance": 0.0,
+          "unrealized_pnl": 0.0,
+          "equity": 0.1015672941906223,
+          "realized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334
@@ -412,7 +479,7 @@
       "closed_trades": 0,
       "liquidations": 0,
       "rejected_min_size": 4,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -476,6 +543,20 @@
           "equity": 0.1015672941906223,
           "realized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 0,
+          "status": "hold",
+          "funding_payment": 0.0,
+          "fee": 0.0,
+          "liquidated": false,
+          "wallet": 0.1015672941906223,
+          "margin_balance": 0.0,
+          "unrealized_pnl": 0.0,
+          "equity": 0.1015672941906223,
+          "realized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334
@@ -488,19 +569,19 @@
   "quote_currency": "USD",
   "usd_rub_rate": 82.04740905761719,
   "usd_rub_timestamp_utc": "2026-11-18T00:00:00+00:00",
-  "updated_at": "2026-11-19T16:47:30.555678+00:00",
+  "updated_at": "2026-11-19T17:14:06.249353+00:00",
   "experiment_id": "quantlab-100-paper-72h-v1",
   "fractional_accounts": {
     "crypto_BTC_USD_1h": {
       "initial_cash": 0.1015672941906223,
-      "cash": 0.07617547064296672,
-      "quantity": 3.966679915106564e-07,
-      "position_entry_price": 63846.785099999994,
-      "position_entry_cost": 0.025391823547655578,
-      "realized_pnl": 0.0,
-      "fees_paid": 6.58475376260767e-05,
-      "trade_count": 1,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "cash": 0.1009786693223036,
+      "quantity": 0.0,
+      "position_entry_price": null,
+      "position_entry_cost": null,
+      "realized_pnl": -0.000588624868318708,
+      "fees_paid": 0.00013050396089284616,
+      "trade_count": 2,
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -539,6 +620,19 @@
           "equity": 0.10117701781309273,
           "unrealized_pnl": -0.0003244288399034893,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 0,
+          "status": "sell",
+          "fill_price": 62691.8623,
+          "quantity": 3.966679915106564e-07,
+          "fee": 6.465642326676945e-05,
+          "realized_pnl": -0.000588624868318708,
+          "cash": 0.1009786693223036,
+          "equity": 0.1009786693223036,
+          "unrealized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334,
@@ -553,7 +647,7 @@
       "realized_pnl": 0.0,
       "fees_paid": 6.58475376260767e-05,
       "trade_count": 1,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -592,6 +686,15 @@
           "equity": 0.10115557532989539,
           "unrealized_pnl": -0.00034587132310083475,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "hold",
+          "cash": 0.07617547064296673,
+          "equity": 0.10096603131992038,
+          "unrealized_pnl": -0.000535415333075845,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334,
@@ -606,7 +709,7 @@
       "realized_pnl": 0.0,
       "fees_paid": 6.58475376260767e-05,
       "trade_count": 1,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -644,6 +747,15 @@
           "cash": 0.07617547064296673,
           "equity": 0.10106311604499085,
           "unrealized_pnl": -0.00043833060800538124,
+          "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "hold",
+          "cash": 0.07617547064296673,
+          "equity": 0.10094802084046571,
+          "unrealized_pnl": -0.0005534258125305164,
           "backfilled": false
         }
       ],
@@ -703,16 +815,16 @@
         "quantity": 2.812958990696199e-05,
         "entry_price": 1805.3461590900174,
         "margin_allocated": 0.025391823547655575,
-        "margin_balance": 0.0253615262355542,
-        "funding_paid": -1.7287615581226375e-07
+        "margin_balance": 0.025361898279386903,
+        "funding_paid": -5.44919988516581e-07
       },
       "realized_pnl": 0.0,
-      "funding_paid": -1.7287615581226375e-07,
+      "funding_paid": -5.44919988516581e-07,
       "fees_paid": 3.0470188257186686e-05,
       "closed_trades": 0,
       "liquidations": 0,
       "rejected_min_size": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -770,6 +882,20 @@
           "equity": 0.10083702849986129,
           "realized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "hold",
+          "funding_payment": -3.720438327043173e-07,
+          "fee": 0.0,
+          "liquidated": false,
+          "wallet": 0.07617547064296673,
+          "margin_balance": 0.025361898279386903,
+          "unrealized_pnl": -0.0010768980341413397,
+          "equity": 0.10046047088821229,
+          "realized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334
@@ -781,16 +907,16 @@
         "quantity": 0.0006786904087636928,
         "entry_price": 74.82593895472752,
         "margin_allocated": 0.025391823547655575,
-        "margin_balance": 0.025361033734552983,
-        "funding_paid": 3.196248454063144e-07
+        "margin_balance": 0.02536124442161172,
+        "funding_paid": 1.089377866709175e-07
       },
       "realized_pnl": 0.0,
-      "funding_paid": 3.196248454063144e-07,
+      "funding_paid": 1.089377866709175e-07,
       "fees_paid": 3.0470188257186686e-05,
       "closed_trades": 0,
       "liquidations": 0,
       "rejected_min_size": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -848,27 +974,35 @@
           "equity": 0.1006445715835856,
           "realized_pnl": 0.0,
           "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 1,
+          "status": "hold",
+          "funding_payment": -2.106870587353969e-07,
+          "fee": 0.0,
+          "liquidated": false,
+          "wallet": 0.07617547064296673,
+          "margin_balance": 0.02536124442161172,
+          "unrealized_pnl": -0.0011018469955923723,
+          "equity": 0.10043486806898608,
+          "realized_pnl": 0.0,
+          "backfilled": false
         }
       ],
       "initial_capital_rub": 8.333333333333334
     },
     "futures_PF_XBTUSD_1h": {
       "initial_cash": 0.1015672941906223,
-      "wallet": 0.07617547064296673,
-      "position": {
-        "quantity": 7.953794599339491e-07,
-        "entry_price": 63848.326054998186,
-        "margin_allocated": 0.025391823547655575,
-        "margin_balance": 0.025361526223196224,
-        "funding_paid": -1.7286379783382155e-07
-      },
-      "realized_pnl": 0.0,
-      "funding_paid": -1.7286379783382155e-07,
-      "fees_paid": 3.0470188257186686e-05,
-      "closed_trades": 0,
+      "wallet": 0.10058232560855508,
+      "position": null,
+      "realized_pnl": -0.000984968582067227,
+      "funding_paid": 1.4699005987122646e-07,
+      "fees_paid": 6.0385714988161855e-05,
+      "closed_trades": 1,
       "liquidations": 0,
       "rejected_min_size": 0,
-      "last_bar": "2026-11-19T15:00:00+00:00",
+      "last_bar": "2026-11-19T16:00:00+00:00",
       "ledger": [
         {
           "timestamp": "2026-11-19T12:00:00+00:00",
@@ -925,6 +1059,22 @@
           "unrealized_pnl": -0.0006370765242244791,
           "equity": 0.10089992034193847,
           "realized_pnl": 0.0,
+          "backfilled": false
+        },
+        {
+          "timestamp": "2026-11-19T16:00:00+00:00",
+          "signal": 0,
+          "status": "close",
+          "funding_payment": 3.19853857705048e-07,
+          "fee": 2.991552673097517e-05,
+          "liquidated": false,
+          "fill_price": 62686.068386066225,
+          "quantity": 7.953794599339491e-07,
+          "wallet": 0.10058232560855508,
+          "margin_balance": 0.0,
+          "unrealized_pnl": 0.0,
+          "equity": 0.10058232560855508,
+          "realized_pnl": -0.000984968582067227,
           "backfilled": false
         }
       ],
