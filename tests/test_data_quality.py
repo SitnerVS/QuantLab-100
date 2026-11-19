@@ -32,7 +32,7 @@ def test_valid_dataset_passes_schema_and_ohlc_checks(tmp_path):
         path,
         "1h",
         "crypto",
-        now=datetime(2026, 1, 3, tzinfo=timezone.utc),
+        now=datetime(2026, 1, 4, tzinfo=timezone.utc),
     )
     assert result["status"] == "OK"
     assert result["rows"] == 60
