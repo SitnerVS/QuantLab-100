@@ -119,6 +119,7 @@ def test_futures_dataset_requires_funding_rate(tmp_path):
         "close": [101.0] * 60,
         "volume": [10.0] * 60,
         "funding_rate": [0.0001] * 60,
+        "min_order_size": [0.0001] * 60,
     })
     frame.to_csv(path, index=False)
     result = analyze_dataset(
