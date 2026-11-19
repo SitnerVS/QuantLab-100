@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from quantlab.backtest.validation import walk_forward_futures_evaluate
 from quantlab.futures.engine import simulate_isolated_long
 from quantlab.strategies import build_signals
 
@@ -135,20 +134,51 @@ def run_bybit_demo_futures_backtests(
                 "initial_cash_usdt": initial_cash,
                 **metrics,
             })
-            folds = walk_forward_futures_evaluate(
-                enriched,
-                strategy,
-                futures_cfg,
-                train_bars=train_bars,
-                test_bars=test_bars,
-                fee_rate=float(futures_cfg["fee_rate"]),
-                slippage_rate=float(futures_cfg["slippage_rate"]),
-                spread_rate=float(futures_cfg["spread_rate"]),
-                initial_cash=initial_cash,
-            )
-            walk_forward_rows.extend({
-                "dataset": path.name, "symbol": symbol, "strategy": strategy, **fold
-            } for fold in folds)
+            # Reuse the just-computed equity curve instead of simulating every
+            # strategy a second time solely to calculate chronological OOS folds.
+            period_returns = result["equity"].pct_change().fillna(0.0)
+            fold_number = 0
+            for test_start in range(train_bars, len(result), test_bars):
+                test_end = min(test_start + test_bars, len(result))
+                returns_window = period_returns.iloc[test_start:test_end].astype(float)
+                if returns_window.empty:
+                    continue
+                fold_number += 1
+                start_equity = float(result["equity"].iloc[test_start - 1])
+                end_equity = float(result["equity"].iloc[test_end - 1])
+                if start_equity > 0:
+                    normalized = start_equity * (1.0 + returns_window).cumprod()
+                    fold_return = (end_equity / start_equity - 1.0) * 100.0
+                    curve = pd.concat(
+                        [pd.Series([start_equity]), normalized.reset_index(drop=True)],
+                        ignore_index=True,
+                    )
+                    drawdown = curve / curve.cummax() - 1.0
+                else:
+                    fold_return = -100.0
+                    drawdown = pd.Series([-1.0])
+                std_window = returns_window.std(ddof=1)
+                sharpe = (
+                    float(returns_window.mean() / std_window * (8760 ** 0.5))
+                    if pd.notna(std_window) and std_window > 0 else 0.0
+                )
+                walk_forward_rows.append({
+                    "dataset": path.name,
+                    "symbol": symbol,
+                    "strategy": strategy,
+                    "fold": fold_number,
+                    "train_observations": int(test_start),
+                    "test_observations": int(test_end - test_start),
+                    "test_start_index": int(test_start),
+                    "test_end_index_exclusive": int(test_end),
+                    "test_return_pct": float(fold_return),
+                    "test_max_drawdown_pct": float(drawdown.min() * 100.0),
+                    "test_sharpe_annualized": sharpe,
+                    "test_liquidations": int(result["liquidated"].iloc[test_start:test_end].sum()),
+                    "test_funding_paid_quote": float(
+                        result["funding_payment"].iloc[test_start:test_end].sum()
+                    ),
+                })
 
     summary = pd.DataFrame(summary_rows)
     walk_forward = pd.DataFrame(walk_forward_rows)
