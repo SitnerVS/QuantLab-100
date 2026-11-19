@@ -36,6 +36,20 @@ def _paper_signal_for_latest(enriched, signal_col="ema_signal"):
     return int(enriched.iloc[-2][signal_col])
 
 
+def _experiment_window(created_at, now, duration_hours=72):
+    start = pd.to_datetime(created_at, utc=True).to_pydatetime()
+    end = start + timedelta(hours=duration_hours)
+    elapsed = max(0.0, (now - start).total_seconds() / 3600.0)
+    remaining = max(0.0, (end - now).total_seconds() / 3600.0)
+    return {
+        "start_utc": start.isoformat(),
+        "end_utc": end.isoformat(),
+        "elapsed_hours": elapsed,
+        "remaining_hours": remaining,
+        "status": "RUNNING" if now < end else "COMPLETED",
+    }
+
+
 def _latest_usd_rub_rate(cfg, now):
     quality_path = REPORTS / "data_quality.csv"
     if not quality_path.exists():
@@ -167,7 +181,10 @@ def run_paper(cfg):
     # Reset pre-futures state and spot accounts after correcting signal timing.
     if int(state.get("schema_version", 1)) < 6:
         state["accounts"] = {}
+        state["created_at"] = now.isoformat()
+        state["experiment_id"] = "quantlab-100-paper-72h-v1"
     state["schema_version"] = 6
+    state.setdefault("experiment_id", "quantlab-100-paper-72h-v1")
     state.setdefault("accounts", {})
     state["unsupported_sleeves"] = {
         "forex_leveraged_sim": "disabled_until_broker_grade_FX_margin_and_rollover_data_exists"
@@ -288,8 +305,17 @@ def run_paper(cfg):
     active_initial_rub = sum(row["initial_capital_rub"] for row in snapshots)
     total_equity_rub = sum(row["equity_rub_estimate"] for row in snapshots)
     total_capital_rub = float(cfg["capital"]["total_rub"])
+    experiment = _experiment_window(state["created_at"], now, duration_hours=72)
     summary = pd.DataFrame([{
         "timestamp_utc": now.isoformat(),
+        "experiment_id": state["experiment_id"],
+        "experiment_start_utc": experiment["start_utc"],
+        "experiment_end_utc": experiment["end_utc"],
+        "experiment_elapsed_hours": experiment["elapsed_hours"],
+        "experiment_remaining_hours": experiment["remaining_hours"],
+        "experiment_status": experiment["status"],
+        "target_equity_rub": 10000.0,
+        "target_progress_pct": total_equity_rub / 10000.0 * 100.0,
         "base_currency": "RUB",
         "usd_rub_rate": usd_rub_rate,
         "usd_rub_rate_timestamp_utc": fx_timestamp,
