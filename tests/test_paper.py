@@ -2,7 +2,10 @@ import pandas as pd
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
-from quantlab.paper.runner import _dataset_sleeve, _paper_signal_for_latest, _experiment_window
+from quantlab.paper.runner import (
+    _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
+    _portfolio_target_metrics,
+)
 
 
 def test_buy_and_sell_updates_cash_and_realized_pnl():
@@ -52,6 +55,7 @@ def test_entry_fee_is_included_in_realized_pnl():
     account, sell = apply_paper_signal(account, 0, 100, "bar-2", 0.01, 0, 0)
     assert sell["status"] == "sell"
     assert account["realized_pnl"] == pytest.approx(-0.495049504950496)
+    assert account["fees_paid"] == pytest.approx(0.495049504950496)
     assert account["fees_paid"] == pytest.approx(0.495049504950496)
 
 
@@ -132,3 +136,26 @@ def test_spot_account_rejects_non_finite_cost_assumptions():
             fee_rate=float("nan"), slippage_rate=0, spread_rate=0,
         )
 
+
+
+def test_spot_account_rejects_non_finite_cost_assumptions():
+    account = new_account(25)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        apply_paper_signal(
+            account, 1, 100, "bar-nan",
+            fee_rate=float("nan"), slippage_rate=0, spread_rate=0,
+        )
+
+
+def test_portfolio_target_progress_includes_inactive_cash():
+    metrics = _portfolio_target_metrics(
+        active_equity_rub=75,
+        inactive_capital_rub=25,
+        total_capital_rub=100,
+        target_equity_rub=10000,
+        duration_hours=72,
+    )
+    assert metrics["total_equity_rub_estimate"] == pytest.approx(100)
+    assert metrics["total_return_pct"] == pytest.approx(0)
+    assert metrics["target_progress_pct"] == pytest.approx(1)
+    assert metrics["target_required_hourly_return_pct"] > 0

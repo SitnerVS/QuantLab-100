@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: quantlab-research
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   research:
@@ -44,6 +44,7 @@ jobs:
           path: |
             reports/
             data/processed/
+            data/raw/
           if-no-files-found: warn
           retention-days: 14
       - name: Commit generated reports and state

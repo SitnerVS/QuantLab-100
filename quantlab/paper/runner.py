@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
+import math
 
 import pandas as pd
 
@@ -184,6 +185,31 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
     }
 
 
+
+def _portfolio_target_metrics(
+    active_equity_rub,
+    inactive_capital_rub,
+    total_capital_rub,
+    target_equity_rub=10000.0,
+    duration_hours=72.0,
+):
+    """Include idle cash in total equity and quantify the target's required pace."""
+    values = [active_equity_rub, inactive_capital_rub, total_capital_rub, target_equity_rub, duration_hours]
+    if any(not math.isfinite(float(value)) or float(value) < 0 for value in values):
+        raise ValueError("portfolio amounts and target must be finite and non-negative")
+    if total_capital_rub <= 0 or target_equity_rub <= 0 or duration_hours <= 0:
+        raise ValueError("total capital, target equity and duration must be positive")
+    total_equity = float(active_equity_rub) + float(inactive_capital_rub)
+    return {
+        "total_equity_rub_estimate": total_equity,
+        "total_return_pct": (total_equity / float(total_capital_rub) - 1.0) * 100.0,
+        "target_progress_pct": total_equity / float(target_equity_rub) * 100.0,
+        "target_required_hourly_return_pct": (
+            (float(target_equity_rub) / float(total_capital_rub)) ** (1.0 / float(duration_hours)) - 1.0
+        ) * 100.0,
+    }
+
+
 def run_paper(cfg):
     REPORTS.mkdir(parents=True, exist_ok=True)
     STATE.parent.mkdir(parents=True, exist_ok=True)
@@ -358,6 +384,15 @@ def run_paper(cfg):
         and float(row["required_account_capital_rub_for_minimum_order"]) > 0
     ]
     total_capital_rub = float(cfg["capital"]["total_rub"])
+    inactive_capital_rub = max(0.0, total_capital_rub - active_initial_rub)
+    target_equity_rub = 10000.0
+    target_metrics = _portfolio_target_metrics(
+        total_equity_rub,
+        inactive_capital_rub,
+        total_capital_rub,
+        target_equity_rub=target_equity_rub,
+        duration_hours=72.0,
+    )
     summary = pd.DataFrame([{
         "timestamp_utc": now.isoformat(),
         "experiment_id": state["experiment_id"],
@@ -366,13 +401,13 @@ def run_paper(cfg):
         "experiment_elapsed_hours": experiment["elapsed_hours"],
         "experiment_remaining_hours": experiment["remaining_hours"],
         "experiment_status": experiment["status"],
-        "target_equity_rub": 10000.0,
-        "target_progress_pct": total_equity_rub / 10000.0 * 100.0,
+        "target_equity_rub": target_equity_rub,
+        **target_metrics,
         "base_currency": "RUB",
         "usd_rub_rate": usd_rub_rate,
         "usd_rub_rate_timestamp_utc": fx_timestamp,
         "active_initial_capital_rub": active_initial_rub,
-        "inactive_capital_rub": max(0.0, total_capital_rub - active_initial_rub),
+        "inactive_capital_rub": inactive_capital_rub,
         "minimum_lot_blocked_capital_rub": minimum_lot_blocked_rub,
         "capital_not_blocked_by_crypto_minimums_rub": max(0.0, active_initial_rub - minimum_lot_blocked_rub),
         "fx_proxy_capital_rub": fx_proxy_capital_rub,
