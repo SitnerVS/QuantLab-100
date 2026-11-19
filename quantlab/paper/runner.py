@@ -251,6 +251,10 @@ def _process_account_bars(cfg, account, enriched, sleeve, key, usd_rub_rate, exp
                     0.0 if ignore_venue_minimums
                     else float(latest.get("min_order_size", 0.0))
                 ),
+                min_notional_usd=(
+                    0.0 if ignore_venue_minimums
+                    else float(latest.get("min_notional_usd", 0.0))
+                ),
             )
         else:
             costs = cfg["costs"]
