@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T20:58:30.338832+00:00
+Updated (UTC): 2026-11-19T21:11:56.776502+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 7.46 h; remaining: 64.54 h
+Elapsed: 7.68 h; remaining: 64.32 h
 
 ## Target
 
@@ -18,7 +18,7 @@ Elapsed: 7.46 h; remaining: 64.54 h
 - Equity: 100.0000 RUB; total return: +0.00000%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 120.64 RUB; budget shortfall: 20.64 RUB
+- Lowest configured crypto minimum-order capital: 119.79 RUB; budget shortfall: 19.79 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
 - Cumulative rejected minimum-size orders: 36; new rejections this run: 0
 
@@ -26,9 +26,9 @@ Elapsed: 7.46 h; remaining: 64.54 h
 
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
-- Equity: 99.6316 RUB; total return: -0.36843%
-- Active return: -0.49125%; fills this run: 0; open positions: 2; closed trades: 4
-- Fees paid: 0.00047821 USD; funding paid (net sign as recorded): -0.00000078 USD
+- Equity: 99.5788 RUB; total return: -0.42116%
+- Active return: -0.56155%; fills this run: 2; open positions: 0; closed trades: 6
+- Fees paid: 0.00057215 USD; funding paid (net sign as recorded): -0.00000123 USD
 - Liquidations: 0
 
 ## Historical out-of-sample research
@@ -48,8 +48,8 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 | Dataset | Strategy | Median OOS return | Positive folds | Folds |
 |---|---|---:|---:|---:|
 | futures_PF_SOLUSD_1h.csv | rsi_signal | +0.4107% | 55.6% | 9 |
+| futures_PF_SOLUSD_1h.csv | bb_signal | +0.1141% | 55.6% | 9 |
 | futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0159% | 55.6% | 9 |
-| futures_PF_XBTUSD_1h.csv | donchian_signal | +0.0000% | 0.0% | 9 |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
