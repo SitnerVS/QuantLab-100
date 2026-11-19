@@ -69,4 +69,4 @@ jobs:
             reports/bybit_demo_futures_data.json
             data/bybit_demo/bybit_demo_linear_*.csv
           if-no-files-found: warn
-          retention-days: 21
+          retention-days: 28
