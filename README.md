@@ -39,14 +39,17 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 - `reports/data_quality.csv` — expected data sources, validity and freshness.
 - `reports/backtest_summary.csv` — historical strategy metrics and buy-and-hold comparison.
 - `reports/walk_forward_summary.csv` — each chronological out-of-sample test window.
-- `reports/walk_forward_ranking.csv` — aggregated ranking by out-of-sample folds.
+- `reports/walk_forward_ranking.csv` — aggregated spot/FX ranking by out-of-sample folds.
+- `reports/futures_backtest_summary.csv` — isolated-margin futures metrics including funding and liquidations.
+- `reports/futures_walk_forward_summary.csv` — futures out-of-sample folds.
+- `reports/futures_walk_forward_ranking.csv` — aggregated futures fold ranking.
 - `reports/paper_portfolio_latest.csv` — virtual account balances and mark-to-market snapshots.
 - `reports/paper_portfolio_summary.csv` — active/inactive capital and total virtual performance.
 - `reports/paper_events_latest.csv` — latest virtual fills and position events.
 
 
 ## Roadmap
-1. Connect reliable historical and current funding-rate data to the isolated futures engine; only then consider enabling futures paper accounts.
+1. Validate futures funding alignment and liquidation results against Kraken venue specifications, then add persistent incremental futures paper state before enabling that sleeve.
 2. Add block-bootstrap confidence intervals and multiple-testing controls before promoting any strategy.
 3. Improve execution realism with next-open fills, venue-specific spread data, partial fills and exchange constraints.
 4. Extend paper-state recovery tests and run the spot-only paper system long enough to evaluate stability across changing market regimes.
