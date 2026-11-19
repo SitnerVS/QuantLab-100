@@ -59,3 +59,25 @@ def test_future_dated_candles_are_flagged(tmp_path):
         now=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     assert result["status"] == "FUTURE_DATA"
+
+
+def test_fx_volume_can_be_missing_without_invalidating_ohlc(tmp_path):
+    path = tmp_path / "fx.csv"
+    times = pd.date_range("2026-01-01", periods=60, freq="D", tz="UTC")
+    frame = pd.DataFrame({
+        "date": times,
+        "open": [1.1] * 60,
+        "high": [1.2] * 60,
+        "low": [1.0] * 60,
+        "close": [1.15] * 60,
+        "volume": [float("nan")] * 60,
+    })
+    frame.to_csv(path, index=False)
+    result = analyze_dataset(
+        path,
+        "1d",
+        "forex",
+        now=datetime(2026, 3, 5, tzinfo=timezone.utc),
+    )
+    assert result["status"] == "OK"
+    assert result["missing_volume_rows"] == 60
