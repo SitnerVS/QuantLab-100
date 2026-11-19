@@ -17,6 +17,7 @@ def new_futures_account(initial_cash):
         "fees_paid": 0.0,
         "closed_trades": 0,
         "liquidations": 0,
+        "rejected_min_size": 0,
         "last_bar": None,
         "ledger": [],
     }
@@ -34,7 +35,8 @@ def apply_isolated_futures_signal(
     slippage_rate=0.0005,
     spread_rate=0.0,
     maintenance_margin_rate=0.005,
-    liquidation_fee_rate=0.005,
+    liquidation_fee_rate=0.025,
+    min_order_size=0.0,
 ):
     """Apply one completed-bar signal to a persistent isolated-margin account.
 
@@ -56,6 +58,8 @@ def apply_isolated_futures_signal(
         raise ValueError("leverage must be >= 1")
     if not 0 < float(max_margin_fraction) <= 1:
         raise ValueError("max_margin_fraction must be in (0, 1]")
+    if not math.isfinite(float(min_order_size)) or float(min_order_size) < 0:
+        raise ValueError("min_order_size must be finite and non-negative")
     cost_rates = [fee_rate, slippage_rate, spread_rate, maintenance_margin_rate, liquidation_fee_rate]
     if any(not math.isfinite(float(rate)) or float(rate) < 0 for rate in cost_rates):
         raise ValueError("cost and margin rates must be finite and non-negative")
@@ -119,18 +123,26 @@ def apply_isolated_futures_signal(
         fill = mark_price * (1.0 + impact)
         notional = margin_allocated * float(leverage)
         quantity = notional / fill
-        open_fee = notional * float(fee_rate)
-        wallet -= margin_allocated
-        position = {
-            "quantity": quantity,
-            "entry_price": fill,
-            "margin_allocated": margin_allocated,
-            "margin_balance": margin_allocated - open_fee,
-            "funding_paid": 0.0,
-        }
-        account["fees_paid"] = float(account["fees_paid"]) + open_fee
-        event.update({"status": "open", "fill_price": fill, "quantity": quantity})
-        event["fee"] += open_fee
+        if quantity < float(min_order_size):
+            account["rejected_min_size"] = int(account.get("rejected_min_size", 0)) + 1
+            event.update({
+                "status": "below_minimum_size",
+                "attempted_quantity": quantity,
+                "minimum_quantity": float(min_order_size),
+            })
+        else:
+            open_fee = notional * float(fee_rate)
+            wallet -= margin_allocated
+            position = {
+                "quantity": quantity,
+                "entry_price": fill,
+                "margin_allocated": margin_allocated,
+                "margin_balance": margin_allocated - open_fee,
+                "funding_paid": 0.0,
+            }
+            account["fees_paid"] = float(account["fees_paid"]) + open_fee
+            event.update({"status": "open", "fill_price": fill, "quantity": quantity})
+            event["fee"] += open_fee
 
     unrealized = (
         float(position["quantity"]) * (mark_price - float(position["entry_price"]))
@@ -167,7 +179,7 @@ def simulate_isolated_long(
     slippage_rate=0.0005,
     spread_rate=0.0,
     maintenance_margin_rate=0.005,
-    liquidation_fee_rate=0.005,
+    liquidation_fee_rate=0.025,
 ):
     """Run the persistent isolated-margin step engine across historical bars."""
     required = {"close", signal_col, funding_col}
@@ -197,6 +209,7 @@ def simulate_isolated_long(
             spread_rate=spread_rate,
             maintenance_margin_rate=maintenance_margin_rate,
             liquidation_fee_rate=liquidation_fee_rate,
+            min_order_size=float(row.get("min_order_size", 0.0)),
         )
         rows.append({
             "position": int(account["position"] is not None),
@@ -219,6 +232,7 @@ def simulate_isolated_long(
         "max_drawdown_pct": float(result["drawdown"].min() * 100.0),
         "closed_trades": int(account["closed_trades"]),
         "liquidations": int(account["liquidations"]),
+        "rejected_min_size": int(account.get("rejected_min_size", 0)),
         "funding_paid_quote": float(account["funding_paid"]),
         "fees_quote": float(account["fees_paid"]),
         "observations": int(len(result)),
