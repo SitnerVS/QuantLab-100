@@ -125,6 +125,70 @@ def download_forex(cfg):
             print(f"[forex proxy] ERROR {symbol}: {exc}")
 
 
+def download_futures(cfg):
+    section = cfg["data"].get("futures", {})
+    symbols = section.get("symbols", [])
+    if not symbols:
+        print("[futures] No contracts configured; skipping.")
+        return
+
+    exchange = ccxt.krakenfutures({"enableRateLimit": True})
+    markets = exchange.load_markets()
+    RAW.mkdir(parents=True, exist_ok=True)
+
+    for instrument in symbols:
+        try:
+            market = next((item for item in markets.values() if item.get("id") == instrument), None)
+            if market is None or not market.get("swap") or not market.get("linear"):
+                raise RuntimeError(f"{instrument} is not an available linear perpetual contract")
+            symbol = market["symbol"]
+            candles = exchange.fetch_ohlcv(
+                symbol,
+                timeframe=section.get("timeframe", "1h"),
+                limit=int(section.get("limit", 720)),
+                params={"price": "mark"},
+            )
+            frame = pd.DataFrame(
+                candles,
+                columns=["timestamp", "open", "high", "low", "close", "volume"],
+            )
+            frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
+            frame = _completed_bars(frame, "timestamp", section.get("timeframe", "1h"))
+
+            response = exchange.publicGetHistoricalfundingrates({"symbol": instrument})
+            rates = response.get("rates", [])
+            if response.get("result") != "success" or not rates:
+                raise RuntimeError("historical funding endpoint returned no rates")
+            funding = pd.DataFrame(rates)
+            funding["timestamp"] = pd.to_datetime(funding["timestamp"], utc=True, errors="coerce")
+            funding["funding_rate"] = pd.to_numeric(
+                funding["relativeFundingRate"], errors="coerce"
+            )
+            funding = funding[["timestamp", "funding_rate"]].dropna()
+            funding = funding.sort_values("timestamp").drop_duplicates("timestamp", keep="last")
+
+            frame = frame.merge(funding, on="timestamp", how="left")
+            missing_funding = int(frame["funding_rate"].isna().sum())
+            frame = frame.dropna(subset=["funding_rate"])
+            frame, dropped = _filter_valid_ohlc(frame, require_volume=True)
+            if frame.empty or len(frame) < 60:
+                raise RuntimeError(
+                    f"insufficient aligned mark/funding history; missing funding candles={missing_funding}"
+                )
+            frame.to_csv(
+                RAW / f"futures_{instrument}_{section.get('timeframe', '1h')}.csv",
+                index=False,
+            )
+            print(
+                f"[futures:kraken] {instrument}: {len(frame)} aligned mark/funding rows; "
+                f"missing funding candles={missing_funding}; invalid OHLC rows filtered={dropped}"
+            )
+            time.sleep(exchange.rateLimit / 1000)
+        except Exception as exc:
+            print(f"[futures:kraken] ERROR {instrument}: {exc}")
+
+
 def download_all(cfg):
     download_crypto(cfg)
     download_forex(cfg)
+    download_futures(cfg)
