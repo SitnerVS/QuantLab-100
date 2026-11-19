@@ -1,7 +1,7 @@
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
-from quantlab.paper.runner import _dataset_sleeve
+from quantlab.paper.runner import _dataset_sleeve, _paper_signal_for_latest
 
 
 def test_buy_and_sell_updates_cash_and_realized_pnl():
@@ -64,6 +64,7 @@ def test_rub_conversion_rejects_invalid_rate():
 
 def test_crypto_and_fx_datasets_map_to_separate_sleeves():
     assert _dataset_sleeve("crypto_BTC_USD_1h.csv") == "crypto_spot"
+    assert _dataset_sleeve("futures_PF_XBTUSD_1h.csv") == "crypto_futures_sim"
     assert _dataset_sleeve("forex_EURUSD=X_1d.csv") == "forex_spot_sim"
     assert _dataset_sleeve("forex_GBPUSD=X_1d.csv") == "forex_spot_sim"
     assert _dataset_sleeve("forex_JPY=X_1d.csv") is None
@@ -80,3 +81,9 @@ def test_position_fraction_keeps_unallocated_cash():
     assert event["status"] == "buy"
     assert account["quantity"] == pytest.approx(0.25)
     assert account["cash"] == pytest.approx(75.0)
+
+
+def test_paper_runner_uses_previous_completed_bar_signal():
+    frame = pd.DataFrame({"ema_signal": [0, 1, 0]})
+    assert _paper_signal_for_latest(frame) == 1
+    assert _paper_signal_for_latest(frame.iloc[:1]) is None
