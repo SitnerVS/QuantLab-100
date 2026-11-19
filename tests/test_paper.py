@@ -98,3 +98,11 @@ def test_72_hour_experiment_window_is_deterministic():
     assert window["elapsed_hours"] == pytest.approx(36)
     assert window["remaining_hours"] == pytest.approx(36)
     assert window["end_utc"].startswith("2026-01-04T00:00:00")
+
+
+def test_72_hour_experiment_window_marks_completion():
+    start = "2026-01-01T00:00:00+00:00"
+    now = pd.Timestamp("2026-01-04T01:00:00Z").to_pydatetime()
+    window = _experiment_window(start, now)
+    assert window["status"] == "COMPLETED"
+    assert window["remaining_hours"] == 0
