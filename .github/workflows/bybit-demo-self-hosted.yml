@@ -48,15 +48,11 @@ jobs:
       - name: Download completed Bybit Demo linear candles (read-only)
         continue-on-error: true
         env:
-          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
-          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
           PYTHONFAULTHANDLER: "1"
         run: .venv/bin/python -m quantlab.exchange.market_data_cli
 
       - name: Download Bybit Demo linear perpetual mark and funding data (read-only)
         env:
-          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
-          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
           PYTHONFAULTHANDLER: "1"
         run: |
           for attempt in 1 2 3; do
