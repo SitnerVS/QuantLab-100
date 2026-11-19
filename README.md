@@ -19,7 +19,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - The FX symbols from Yahoo Finance are research proxies, not broker-grade executable bid/ask data. In particular, JPY=X is not a broker-specific USD/JPY feed. Yahoo FX volume is not a centralized traded-volume feed; missing values are normalized to zero and volume is not used by the current signals. Malformed OHLC rows are filtered before research.
 - Paper fills use completed-bar close as a reference price plus conservative fee/spread/slippage adjustments. They are not order-book fills and do not model latency or partial fills.
 - Current paper strategy is EMA trend only. The other signal families are research candidates, not automatically traded.
-- Walk-forward folds currently evaluate fixed strategy rules and do not optimize parameters. Bootstrap confidence intervals, multiple-testing correction and robust strategy-selection controls remain future work.
+- Walk-forward folds evaluate fixed causal strategy rules and do not optimize parameters. Historical return uncertainty is estimated with circular block bootstrap; one-sided exploratory p-values are adjusted across all tested dataset/strategy combinations with Holm-Bonferroni. These statistics are diagnostics, not forecasts or proof of future profitability.
 - Small balances may be below real exchange minimum order sizes. All balances and fills are virtual.
 
 ## Run locally
@@ -43,6 +43,7 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 - `reports/futures_backtest_summary.csv` — isolated-margin futures metrics including funding and liquidations.
 - `reports/futures_walk_forward_summary.csv` — futures out-of-sample folds.
 - `reports/futures_walk_forward_ranking.csv` — aggregated futures fold ranking.
+- `reports/statistical_validation.csv` — block-bootstrap return intervals and Holm-adjusted p-values across the tested strategy set.
 - `reports/paper_portfolio_latest.csv` — virtual account balances and mark-to-market snapshots.
 - `reports/paper_portfolio_summary.csv` — active/inactive capital and total virtual performance.
 - `reports/paper_events_latest.csv` — latest virtual fills and position events.
@@ -50,7 +51,7 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 
 ## Roadmap
 1. Validate the persistent futures paper engine's funding and liquidation results against Kraken venue specifications and add more granular mark-price execution modelling.
-2. Add block-bootstrap confidence intervals and multiple-testing controls before promoting any strategy.
+2. Extend uncertainty analysis to out-of-sample fold returns and test sensitivity to block length, bootstrap count and market regime.
 3. Improve execution realism with next-open fills, venue-specific spread data, partial fills and exchange constraints.
 4. Extend paper-state recovery tests and run the spot-only paper system long enough to evaluate stability across changing market regimes.
 5. Evaluate additional signals and risk controls only through chronological out-of-sample folds; do not select strategies from in-sample rankings.
