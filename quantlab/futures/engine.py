@@ -18,6 +18,7 @@ def new_futures_account(initial_cash):
         "closed_trades": 0,
         "liquidations": 0,
         "rejected_min_size": 0,
+        "rejected_min_notional": 0,
         "last_bar": None,
         "ledger": [],
     }
@@ -37,6 +38,7 @@ def apply_isolated_futures_signal(
     maintenance_margin_rate=0.05,
     liquidation_fee_rate=0.025,
     min_order_size=0.0,
+    min_notional_usd=0.0,
 ):
     """Apply one completed-bar signal to a persistent isolated-margin account.
 
@@ -60,6 +62,8 @@ def apply_isolated_futures_signal(
         raise ValueError("max_margin_fraction must be in (0, 1]")
     if not math.isfinite(float(min_order_size)) or float(min_order_size) < 0:
         raise ValueError("min_order_size must be finite and non-negative")
+    if not math.isfinite(float(min_notional_usd)) or float(min_notional_usd) < 0:
+        raise ValueError("min_notional_usd must be finite and non-negative")
     cost_rates = [fee_rate, slippage_rate, spread_rate, maintenance_margin_rate, liquidation_fee_rate]
     if any(not math.isfinite(float(rate)) or float(rate) < 0 for rate in cost_rates):
         raise ValueError("cost and margin rates must be finite and non-negative")
@@ -123,12 +127,19 @@ def apply_isolated_futures_signal(
         fill = mark_price * (1.0 + impact)
         notional = margin_allocated * float(leverage)
         quantity = notional / fill
-        if quantity < float(min_order_size):
-            account["rejected_min_size"] = int(account.get("rejected_min_size", 0)) + 1
+        if quantity < float(min_order_size) or notional < float(min_notional_usd):
+            if quantity < float(min_order_size):
+                account["rejected_min_size"] = int(account.get("rejected_min_size", 0)) + 1
+                rejection_status = "below_minimum_size"
+            else:
+                account["rejected_min_notional"] = int(account.get("rejected_min_notional", 0)) + 1
+                rejection_status = "below_minimum_notional"
             event.update({
-                "status": "below_minimum_size",
+                "status": rejection_status,
                 "attempted_quantity": quantity,
                 "minimum_quantity": float(min_order_size),
+                "attempted_notional_usd": notional,
+                "minimum_notional_usd": float(min_notional_usd),
             })
         else:
             open_fee = notional * float(fee_rate)
@@ -210,6 +221,7 @@ def simulate_isolated_long(
             maintenance_margin_rate=maintenance_margin_rate,
             liquidation_fee_rate=liquidation_fee_rate,
             min_order_size=float(row.get("min_order_size", 0.0)),
+            min_notional_usd=float(row.get("min_notional_usd", 0.0)),
         )
         rows.append({
             "position": int(account["position"] is not None),
@@ -233,6 +245,7 @@ def simulate_isolated_long(
         "closed_trades": int(account["closed_trades"]),
         "liquidations": int(account["liquidations"]),
         "rejected_min_size": int(account.get("rejected_min_size", 0)),
+        "rejected_min_notional": int(account.get("rejected_min_notional", 0)),
         "funding_paid_quote": float(account["funding_paid"]),
         "fees_quote": float(account["fees_paid"]),
         "observations": int(len(result)),
