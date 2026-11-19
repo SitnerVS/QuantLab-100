@@ -1,4 +1,5 @@
-import pandas as pd
+import csv
+
 import pytest
 
 from quantlab.exchange.bybit_market_data import fetch_demo_market_data
@@ -16,14 +17,16 @@ class FakeMarketClient:
 
 
 def test_downloads_only_completed_valid_candles_and_writes_report(tmp_path):
-    now = pd.Timestamp("2026-01-01T02:30:00Z").to_pydatetime()
+    from datetime import datetime, timezone
+    now = datetime(2026, 1, 1, 2, 30, tzinfo=timezone.utc)
     report = fetch_demo_market_data(
         client=FakeMarketClient(), symbols=("BTCUSDT",), interval="60", limit=3,
         now=now, raw_dir=tmp_path / "raw", report_path=tmp_path / "report.json",
     )
-    frame = pd.read_csv(tmp_path / "raw/bybit_demo_linear_BTCUSDT_60.csv")
-    assert len(frame) == 2
-    assert frame["close"].tolist() == [100, 110]
+    with (tmp_path / "raw/bybit_demo_linear_BTCUSDT_60.csv").open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 2
+    assert [float(row["close"]) for row in rows] == [100, 110]
     assert report["status"] == "DATA_RECEIVED"
     assert report["orders_submitted"] == 0
     assert report["real_trading_enabled"] is False
