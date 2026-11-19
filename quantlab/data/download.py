@@ -31,6 +31,34 @@ def _completed_bars(frame, timestamp_column, timeframe, now=None):
     return result.drop(columns=["_timestamp_utc"])
 
 
+def _filter_valid_ohlc(frame, require_volume=False):
+    result = frame.copy()
+    price_cols = ["open", "high", "low", "close"]
+    prices = result[price_cols].apply(pd.to_numeric, errors="coerce")
+    valid = prices.notna().all(axis=1)
+    valid &= prices["open"].gt(0) & prices["close"].gt(0)
+    valid &= prices["high"].ge(prices[["open", "close"]].max(axis=1))
+    valid &= prices["low"].le(prices[["open", "close"]].min(axis=1))
+    valid &= prices["high"].ge(prices["low"])
+
+    if require_volume:
+        if "volume" not in result.columns:
+            raise ValueError("volume column is required for crypto OHLCV")
+        volume = pd.to_numeric(result["volume"], errors="coerce")
+        valid &= volume.notna() & volume.ge(0)
+    else:
+        if "volume" not in result.columns:
+            result["volume"] = 0.0
+        else:
+            result["volume"] = pd.to_numeric(result["volume"], errors="coerce").fillna(0.0)
+
+    dropped = int((~valid).sum())
+    result = result.loc[valid].copy()
+    for column in price_cols:
+        result[column] = prices.loc[valid, column]
+    return result, dropped
+
+
 def download_crypto(cfg):
     section = cfg["data"]["crypto"]
     exchange_name = section.get("exchange", "kraken")
@@ -52,13 +80,14 @@ def download_crypto(cfg):
             )
             frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
             frame = _completed_bars(frame, "timestamp", section["timeframe"])
+            frame, dropped = _filter_valid_ohlc(frame, require_volume=True)
             if frame.empty:
                 raise RuntimeError("source returned no completed OHLCV candles")
             frame.to_csv(
                 RAW / f"crypto_{safe_symbol}_{section['timeframe']}.csv",
                 index=False,
             )
-            print(f"[crypto:{exchange_name}] {symbol}: {len(frame)} completed rows")
+            print(f"[crypto:{exchange_name}] {symbol}: {len(frame)} valid completed rows; filtered {dropped} invalid rows")
             time.sleep(exchange.rateLimit / 1000)
         except Exception as exc:
             print(f"[crypto:{exchange_name}] ERROR {symbol}: {exc}")
@@ -87,10 +116,11 @@ def download_forex(cfg):
             if time_col is None:
                 raise RuntimeError("source response has no date column")
             frame = _completed_bars(frame, time_col, section["interval"])
+            frame, dropped = _filter_valid_ohlc(frame, require_volume=False)
             if frame.empty:
                 raise RuntimeError("source returned no completed OHLCV candles")
             frame.to_csv(RAW / f"forex_{symbol}_{section['interval']}.csv", index=False)
-            print(f"[forex proxy] {symbol}: {len(frame)} completed rows")
+            print(f"[forex proxy] {symbol}: {len(frame)} valid completed rows; filtered {dropped} invalid rows")
         except Exception as exc:
             print(f"[forex proxy] ERROR {symbol}: {exc}")
 
