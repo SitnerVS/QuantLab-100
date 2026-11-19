@@ -1,0 +1,43 @@
+name: Bybit Demo connection (self-hosted EU runner)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bybit-demo-self-hosted
+  cancel-in-progress: false
+
+jobs:
+  bybit-demo-read-only:
+    runs-on: [self-hosted, macOS, quantlab-bybit-demo]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Verify Bybit Demo API connection (read-only)
+        env:
+          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
+          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
+        run: python -m quantlab.exchange.cli
+      - name: Upload connection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bybit-demo-connection-${{ github.run_number }}
+          path: reports/bybit_demo_connection.json
+          if-no-files-found: warn
+          retention-days: 7
