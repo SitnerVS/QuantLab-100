@@ -1,6 +1,6 @@
 import pytest
 
-from quantlab.paper.engine import apply_paper_signal, new_account
+from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 
 
 def test_buy_and_sell_updates_cash_and_realized_pnl():
@@ -50,3 +50,12 @@ def test_entry_fee_is_included_in_realized_pnl():
     account, sell = apply_paper_signal(account, 0, 100, "bar-2", 0.01, 0, 0)
     assert sell["status"] == "sell"
     assert account["realized_pnl"] == pytest.approx(-0.495049504950496)
+
+
+def test_rub_capital_is_converted_to_usd_quote_currency():
+    assert rub_to_usd(25, 100) == pytest.approx(0.25)
+
+
+def test_rub_conversion_rejects_invalid_rate():
+    with pytest.raises(ValueError):
+        rub_to_usd(25, 0)
