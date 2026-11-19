@@ -13,8 +13,8 @@ capital:
 
 data:
   crypto:
-    exchange: binance
-    symbols: ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+    exchange: kraken
+    symbols: ["BTC/USD", "ETH/USD", "SOL/USD"]
     timeframe: "1h"
     limit: 1000
   forex:
@@ -23,7 +23,7 @@ data:
     period: "2y"
 
 costs:
-  crypto_fee_rate: 0.001
+  crypto_fee_rate: 0.0026
   forex_fee_rate: 0.0002
   slippage_rate: 0.0005
   crypto_spread_rate: 0.0002
