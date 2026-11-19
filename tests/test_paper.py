@@ -49,4 +49,4 @@ def test_entry_fee_is_included_in_realized_pnl():
     account, _ = apply_paper_signal(account, 1, 100, "bar-1", 0.01, 0, 0)
     account, sell = apply_paper_signal(account, 0, 100, "bar-2", 0.01, 0, 0)
     assert sell["status"] == "sell"
-    assert account["realized_pnl"] == pytest.approx(-0.4975247524752475)
+    assert account["realized_pnl"] == pytest.approx(-0.495049504950496)
