@@ -6,6 +6,7 @@ from quantlab.paper.runner import (
     _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
     _portfolio_target_metrics, _run_fractional_shadow,
     _write_experiment_status_report, _unprocessed_signal_rows,
+    _process_account_bars,
 )
 
 
@@ -303,4 +304,44 @@ def test_paper_cursor_does_not_reprocess_already_seen_bars():
         "ema_signal": [0, 1, 0, 1, 1],
     })
     assert _unprocessed_signal_rows(enriched, times[-1].isoformat()) == []
+
+
+
+def test_account_replays_missed_bars_in_chronological_order():
+    times = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    enriched = pd.DataFrame({
+        "timestamp": times,
+        "close": [100.0, 110.0, 105.0, 120.0, 125.0],
+        "ema_signal": [0, 1, 0, 1, 1],
+        "min_order_size": [0.0] * 5,
+        "min_notional_usd": [0.0] * 5,
+    })
+    account = new_account(100.0)
+    account["initial_capital_rub"] = 100.0
+    account["last_bar"] = times[1].isoformat()
+    cfg = {
+        "costs": {
+            "crypto_fee_rate": 0.0,
+            "forex_fee_rate": 0.0,
+            "slippage_rate": 0.0,
+            "crypto_spread_rate": 0.0,
+            "forex_spread_rate": 0.0,
+        },
+        "paper": {"max_position_fraction": 1.0},
+    }
+    updated, events, snapshot = _process_account_bars(
+        cfg,
+        account,
+        enriched,
+        "crypto_spot",
+        "crypto_TEST_1h",
+        usd_rub_rate=1.0,
+        experiment={"status": "RUNNING"},
+        ignore_venue_minimums=False,
+    )
+    assert [event["status"] for event in events] == ["buy", "sell", "buy"]
+    assert [event["backfilled"] for event in events] == [True, True, False]
+    assert updated["last_bar"] == times[-1].isoformat()
+    assert updated["trade_count"] == 3
+    assert snapshot["quantity"] > 0
 
