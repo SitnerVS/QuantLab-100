@@ -81,3 +81,28 @@ def test_fx_volume_can_be_missing_without_invalidating_ohlc(tmp_path):
     )
     assert result["status"] == "OK"
     assert result["missing_volume_rows"] == 60
+
+
+def test_duplicate_timestamps_and_invalid_ohlc_are_flagged(tmp_path):
+    path = tmp_path / "bad.csv"
+    times = list(pd.date_range("2026-01-01", periods=60, freq="h", tz="UTC"))
+    times[-1] = times[-2]
+    frame = pd.DataFrame({
+        "timestamp": times,
+        "open": [100.0] * 60,
+        "high": [102.0] * 60,
+        "low": [99.0] * 60,
+        "close": [101.0] * 60,
+        "volume": [10.0] * 60,
+    })
+    frame.loc[0, "high"] = 98.0
+    frame.to_csv(path, index=False)
+    result = analyze_dataset(
+        path,
+        "1h",
+        "crypto",
+        now=datetime(2026, 1, 3, tzinfo=timezone.utc),
+    )
+    assert result["status"] == "WARN"
+    assert result["duplicate_timestamps"] == 1
+    assert result["invalid_ohlc_rows"] == 1
