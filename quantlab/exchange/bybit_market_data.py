@@ -1,17 +1,17 @@
-"""Read-only Bybit Demo linear market-data collection."""
+"""Read-only Bybit Demo linear market-data collection (standard library only)."""
 from __future__ import annotations
 
+import csv
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-
-import pandas as pd
 
 from quantlab.exchange.bybit_demo import _require_success, build_demo_session
 
 RAW_DIR = Path("data/raw")
 REPORT_PATH = Path("reports/bybit_demo_market_data.json")
 TIMEFRAME_MINUTES = {"1": 1, "3": 3, "5": 5, "15": 15, "30": 30, "60": 60, "120": 120, "240": 240, "D": 1440}
+CSV_FIELDS = ["timestamp", "open", "high", "low", "close", "volume", "turnover"]
 
 
 def fetch_demo_market_data(
@@ -31,8 +31,7 @@ def fetch_demo_market_data(
     session = client or build_demo_session()
     now = now or datetime.now(timezone.utc)
     duration = timedelta(minutes=TIMEFRAME_MINUTES[interval])
-    raw_dir = Path(raw_dir)
-    report_path = Path(report_path)
+    raw_dir, report_path = Path(raw_dir), Path(report_path)
     raw_dir.mkdir(parents=True, exist_ok=True)
     summaries = []
 
@@ -44,31 +43,45 @@ def fetch_demo_market_data(
         rows = response.get("list", [])
         if not rows:
             raise RuntimeError(f"Bybit Demo returned no kline rows for {symbol}")
-        frame = pd.DataFrame(
-            rows,
-            columns=["start_ms", "open", "high", "low", "close", "volume", "turnover"],
-        )
-        frame["timestamp"] = pd.to_datetime(pd.to_numeric(frame.pop("start_ms"), errors="coerce"), unit="ms", utc=True)
-        for column in ("open", "high", "low", "close", "volume", "turnover"):
-            frame[column] = pd.to_numeric(frame[column], errors="coerce")
-        frame = frame.dropna(subset=["timestamp", "open", "high", "low", "close", "volume"])
-        frame = frame.loc[frame["timestamp"] + duration <= now].copy()
-        valid = (
-            frame["open"].gt(0) & frame["high"].ge(frame[["open", "close"]].max(axis=1))
-            & frame["low"].le(frame[["open", "close"]].min(axis=1))
-            & frame["high"].ge(frame["low"]) & frame["volume"].ge(0)
-        )
-        frame = frame.loc[valid].sort_values("timestamp").drop_duplicates("timestamp", keep="last")
-        if frame.empty:
+        candles = []
+        for row in rows:
+            if not isinstance(row, (list, tuple)) or len(row) < 6:
+                continue
+            try:
+                start = datetime.fromtimestamp(int(row[0]) / 1000, tz=timezone.utc)
+                values = [float(row[index]) for index in range(1, 6)]
+                open_price, high, low, close, volume = values
+                turnover = float(row[6]) if len(row) > 6 else 0.0
+            except (TypeError, ValueError, OverflowError, OSError):
+                continue
+            if start + duration > now:
+                continue
+            if (open_price <= 0 or close <= 0 or high < max(open_price, close)
+                    or low > min(open_price, close) or high < low or volume < 0):
+                continue
+            candles.append({
+                "timestamp": start.isoformat(), "open": open_price, "high": high,
+                "low": low, "close": close, "volume": volume, "turnover": turnover,
+                "_sort": start,
+            })
+        candles.sort(key=lambda item: item["_sort"])
+        deduplicated = {}
+        for candle in candles:
+            deduplicated[candle["timestamp"]] = candle
+        candles = list(deduplicated.values())
+        if not candles:
             raise RuntimeError(f"Bybit Demo returned no valid completed candles for {symbol}")
-        frame = frame[["timestamp", "open", "high", "low", "close", "volume", "turnover"]]
         path = raw_dir / f"bybit_demo_linear_{symbol}_{interval}.csv"
-        frame.to_csv(path, index=False)
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+            writer.writeheader()
+            for candle in candles:
+                writer.writerow({key: candle[key] for key in CSV_FIELDS})
         summaries.append({
             "symbol": symbol, "category": "linear", "interval": interval,
-            "rows": int(len(frame)), "first_bar_utc": frame["timestamp"].iloc[0].isoformat(),
-            "last_bar_utc": frame["timestamp"].iloc[-1].isoformat(),
-            "file": str(path), "invalid_or_incomplete_rows_excluded": int(len(rows) - len(frame)),
+            "rows": len(candles), "first_bar_utc": candles[0]["timestamp"],
+            "last_bar_utc": candles[-1]["timestamp"], "file": str(path),
+            "invalid_or_incomplete_rows_excluded": len(rows) - len(candles),
         })
 
     report = {
