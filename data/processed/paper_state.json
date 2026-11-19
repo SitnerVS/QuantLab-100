@@ -1,99 +1,75 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "created_at": "2026-11-19T12:58:26.819305+00:00",
   "accounts": {
     "crypto_BTC_USD_1h": {
       "initial_cash": 0.1015672941906223,
-      "cash": 0.0,
-      "quantity": 1.5849431674585011e-06,
-      "position_entry_price": 63916.42685999999,
-      "position_entry_cost": 0.10156729419062231,
+      "cash": 0.07617547064296672,
+      "quantity": 3.966679915106564e-07,
+      "position_entry_price": 63846.785099999994,
+      "position_entry_cost": 0.025391823547655578,
       "realized_pnl": 0.0,
       "trade_count": 1,
       "last_bar": "2026-11-19T12:00:00+00:00",
       "ledger": [
         {
-          "timestamp": "2026-11-19T11:00:00+00:00",
-          "signal": 1,
-          "status": "buy",
-          "fill_price": 63916.42685999999,
-          "quantity": 1.5849431674585011e-06,
-          "fee": 0.0002633901505043068,
-          "cash": 0.0,
-          "equity": 0.10124315814523088,
-          "unrealized_pnl": -6.0745894887128635e-05
-        },
-        {
           "timestamp": "2026-11-19T12:00:00+00:00",
           "signal": 1,
-          "status": "hold",
-          "cash": 0.0,
-          "equity": 0.10113284610077576,
-          "unrealized_pnl": -0.000171057939342238
+          "status": "buy",
+          "fill_price": 63846.785099999994,
+          "quantity": 3.966679915106564e-07,
+          "fee": 6.58475376260767e-05,
+          "cash": 0.07617547064296672,
+          "equity": 0.10148626017927444,
+          "unrealized_pnl": -1.5186473721782128e-05
         }
       ],
       "initial_capital_rub": 8.333333333333334
     },
     "crypto_ETH_USD_1h": {
       "initial_cash": 0.1015672941906223,
-      "cash": 0.0,
-      "quantity": 5.607858630605793e-05,
-      "position_entry_price": 1806.463228,
-      "position_entry_cost": 0.10156729419062231,
+      "cash": 0.07617547064296673,
+      "quantity": 1.4029904513324233e-05,
+      "position_entry_price": 1805.1424359999999,
+      "position_entry_cost": 0.025391823547655575,
       "realized_pnl": 0.0,
       "trade_count": 1,
       "last_bar": "2026-11-19T12:00:00+00:00",
       "ledger": [
         {
-          "timestamp": "2026-11-19T11:00:00+00:00",
-          "signal": 1,
-          "status": "buy",
-          "fill_price": 1806.463228,
-          "quantity": 5.607858630605793e-05,
-          "fee": 0.0002633901505043068,
-          "cash": 0.0,
-          "equity": 0.10124315814523087,
-          "unrealized_pnl": -6.0745894887136435e-05
-        },
-        {
           "timestamp": "2026-11-19T12:00:00+00:00",
           "signal": 1,
-          "status": "hold",
-          "cash": 0.0,
-          "equity": 0.10116913441130687,
-          "unrealized_pnl": -0.00013476962881114207
+          "status": "buy",
+          "fill_price": 1805.1424359999999,
+          "quantity": 1.4029904513324233e-05,
+          "fee": 6.58475376260767e-05,
+          "cash": 0.07617547064296673,
+          "equity": 0.10148626017927445,
+          "unrealized_pnl": -1.5186473721783451e-05
         }
       ],
       "initial_capital_rub": 8.333333333333334
     },
     "crypto_SOL_USD_1h": {
       "initial_cash": 0.1015672941906223,
-      "cash": 0.0,
-      "quantity": 0.00135424235079228,
-      "position_entry_price": 74.804856,
-      "position_entry_cost": 0.1015672941906223,
+      "cash": 0.07617547064296673,
+      "quantity": 0.00033851530742687867,
+      "position_entry_price": 74.81486199999999,
+      "position_entry_cost": 0.025391823547655575,
       "realized_pnl": 0.0,
       "trade_count": 1,
       "last_bar": "2026-11-19T12:00:00+00:00",
       "ledger": [
         {
-          "timestamp": "2026-11-19T11:00:00+00:00",
-          "signal": 1,
-          "status": "buy",
-          "fill_price": 74.804856,
-          "quantity": 0.00135424235079228,
-          "fee": 0.0002633901505043068,
-          "cash": 0.0,
-          "equity": 0.10124315814523087,
-          "unrealized_pnl": -6.074589488713281e-05
-        },
-        {
           "timestamp": "2026-11-19T12:00:00+00:00",
           "signal": 1,
-          "status": "hold",
-          "cash": 0.0,
-          "equity": 0.10125670056873877,
-          "unrealized_pnl": -4.7203471379222326e-05
+          "status": "buy",
+          "fill_price": 74.81486199999999,
+          "quantity": 0.00033851530742687867,
+          "fee": 6.58475376260767e-05,
+          "cash": 0.07617547064296673,
+          "equity": 0.10148626017927445,
+          "unrealized_pnl": -1.5186473721782887e-05
         }
       ],
       "initial_capital_rub": 8.333333333333334
@@ -149,5 +125,5 @@
   "quote_currency": "USD",
   "usd_rub_rate": 82.04740905761719,
   "usd_rub_timestamp_utc": "2026-11-18T00:00:00+00:00",
-  "updated_at": "2026-11-19T13:00:16.099654+00:00"
+  "updated_at": "2026-11-19T13:09:48.597168+00:00"
 }
