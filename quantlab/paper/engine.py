@@ -9,6 +9,7 @@ def apply_paper_signal(
     fee_rate=0.001,
     slippage_rate=0.0005,
     spread_rate=0.0,
+    max_position_fraction=1.0,
 ):
     """Apply one completed-bar long/flat signal to a cash-only virtual account.
 
@@ -21,6 +22,9 @@ def apply_paper_signal(
         raise ValueError("close must be positive")
     if min(float(fee_rate), float(slippage_rate), float(spread_rate)) < 0:
         raise ValueError("cost rates cannot be negative")
+    max_position_fraction = float(max_position_fraction)
+    if not 0 < max_position_fraction <= 1:
+        raise ValueError("max_position_fraction must be in (0, 1]")
 
     account = dict(account)
     account.setdefault("cash", 0.0)
@@ -43,7 +47,8 @@ def apply_paper_signal(
 
     if signal and quantity <= 0 and cash > 0:
         fill = close * (1.0 + impact)
-        quantity = cash / (fill * (1.0 + fee))
+        allocated_cash = cash * max_position_fraction
+        quantity = allocated_cash / (fill * (1.0 + fee))
         notional = quantity * fill
         commission = notional * fee
         cash -= notional + commission
