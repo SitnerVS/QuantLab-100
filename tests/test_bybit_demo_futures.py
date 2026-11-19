@@ -61,7 +61,7 @@ def test_collects_true_mark_candles_funding_and_contract_rules(tmp_path):
     assert float(rows[0]["min_order_size"]) == pytest.approx(0.001)
     assert report["price_basis"] == "mark"
     assert report["environment"] == "MAINNET_PUBLIC_MARKET_DATA"
-    assert report["market_data_endpoint"] == "api.bytick.com"
+    assert report["market_data_endpoint"] == "api.bybit.com"
     assert report["history_days_requested"] == 1
     assert report["status"] == "FUTURES_DATA_RECEIVED"
     assert report["orders_submitted"] == 0
@@ -121,7 +121,7 @@ def test_rejects_missing_instrument_minimum(tmp_path):
         _collect(InvalidInstrumentClient(), tmp_path)
 
 
-def test_public_market_session_uses_unauthenticated_bytick_mainnet(monkeypatch):
+def test_public_market_session_uses_unauthenticated_bybit_mainnet(monkeypatch):
     import pybit.unified_trading
     from quantlab.exchange.bybit_demo import build_public_market_session
 
@@ -134,4 +134,4 @@ def test_public_market_session_uses_unauthenticated_bytick_mainnet(monkeypatch):
     monkeypatch.setattr(pybit.unified_trading, "HTTP", FakeHTTP)
     session = build_public_market_session()
     assert isinstance(session, FakeHTTP)
-    assert captured == {"testnet": False, "demo": False, "domain": "bytick"}
+    assert captured == {"testnet": False, "demo": False, "domain": "bybit"}
