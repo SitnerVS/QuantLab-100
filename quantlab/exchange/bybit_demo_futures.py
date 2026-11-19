@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from quantlab.exchange.bybit_demo import _require_success, build_demo_session
+from quantlab.exchange.bybit_demo import _require_success, build_public_market_session
 
 OUTPUT_DIR = Path("data/bybit_demo")
 REPORT_PATH = Path("reports/bybit_demo_futures_data.json")
@@ -136,7 +136,7 @@ def fetch_bybit_demo_futures_data(
         raise ValueError("kline_page_limit must be between 1 and 1000")
     if not 1 <= int(funding_page_limit) <= 200:
         raise ValueError("funding_page_limit must be between 1 and 200")
-    session = client or build_demo_session()
+    session = client or build_public_market_session()
     now = now or datetime.now(timezone.utc)
     duration = timedelta(minutes=TIMEFRAME_MINUTES[interval])
     end_ms = int(now.timestamp() * 1000)
@@ -243,8 +243,8 @@ def fetch_bybit_demo_futures_data(
         "history_start_utc": datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).isoformat(),
         "history_days_requested": int(history_days),
         "exchange": "Bybit",
-        "environment": "DEMO",
-        "market_type": "linear_perpetual",
+        "environment": "MAINNET_PUBLIC_MARKET_DATA",
+        "market_type": "linear_perpetual",\n        "market_data_endpoint": "api.bytick.com",\n        "source_note": "Unauthenticated mainnet public market data; Bybit documents Demo public market data as identical to mainnet public market data.",
         "price_basis": "mark",
         "volume_note": "Mark-price kline endpoint does not return traded volume; volume and turnover are zero placeholders.",
         "funding_alignment": "settlement timestamp matched to completed mark-candle close",
