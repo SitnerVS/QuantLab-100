@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-19T20:46:29.951329+00:00
+Updated (UTC): 2026-11-19T20:51:36.893694+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 7.26 h; remaining: 64.74 h
+Elapsed: 7.34 h; remaining: 64.66 h
 
 ## Target
 
@@ -34,22 +34,6 @@ This separate research view deliberately ignores venue minimum order sizes. Its 
 ## Historical out-of-sample research
 
 The tables below are exploratory rankings of fixed strategy rules on chronological test folds. They are not forecasts and do not automatically activate a strategy.
-
-### Spot / FX proxy
-
-| Dataset | Strategy | Median OOS return | Positive folds | Folds |
-|---|---|---:|---:|---:|
-| forex_RUB=X_1d.csv | bb_signal | +1.9775% | 66.7% | 6 |
-| forex_JPY=X_1d.csv | rsi_signal | +0.1257% | 50.0% | 6 |
-| forex_GBPUSD=X_1d.csv | donchian_signal | +0.0000% | 16.7% | 6 |
-
-### Crypto futures
-
-| Dataset | Strategy | Median OOS return | Positive folds | Folds |
-|---|---|---:|---:|---:|
-| futures_PF_SOLUSD_1h.csv | rsi_signal | +0.4107% | 55.6% | 9 |
-| futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0159% | 55.6% | 9 |
-| futures_PF_XBTUSD_1h.csv | donchian_signal | +0.0000% | 0.0% | 9 |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
