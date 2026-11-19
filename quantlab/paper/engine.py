@@ -107,3 +107,12 @@ def new_account(initial_cash):
         "last_bar": None,
         "ledger": [],
     }
+
+
+def rub_to_usd(amount_rub, rub_per_usd):
+    """Convert RUB to USD using a RUB-per-USD reference rate."""
+    amount_rub = float(amount_rub)
+    rub_per_usd = float(rub_per_usd)
+    if amount_rub < 0 or rub_per_usd <= 0:
+        raise ValueError("amount_rub must be non-negative and rub_per_usd positive")
+    return amount_rub / rub_per_usd
