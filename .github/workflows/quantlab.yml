@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: quantlab-research
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   research:
@@ -55,8 +55,12 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Update QuantLab research outputs"
             git fetch origin main
-            git rebase origin/main
-            git push origin HEAD:main
+            if git rebase origin/main; then
+              git push origin HEAD:main
+            else
+              git rebase --abort
+              echo "::warning::Concurrent update prevented committing generated state. The run artifact is preserved; the next run will retry."
+            fi
           else
             echo "No report or state changes to commit."
           fi
