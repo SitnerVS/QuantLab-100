@@ -10,6 +10,8 @@ def apply_paper_signal(
     slippage_rate=0.0005,
     spread_rate=0.0,
     max_position_fraction=1.0,
+    min_order_size=0.0,
+    min_notional=0.0,
 ):
     """Apply one completed-bar long/flat signal to a cash-only virtual account.
 
@@ -31,6 +33,7 @@ def apply_paper_signal(
     account.setdefault("quantity", 0.0)
     account.setdefault("realized_pnl", 0.0)
     account.setdefault("trade_count", 0)
+    account.setdefault("rejected_min_size", 0)
     account.setdefault("position_entry_price", None)
     account.setdefault("position_entry_cost", None)
     account.setdefault("last_bar", None)
@@ -50,19 +53,29 @@ def apply_paper_signal(
         allocated_cash = cash * max_position_fraction
         quantity = allocated_cash / (fill * (1.0 + fee))
         notional = quantity * fill
-        commission = notional * fee
-        cash -= notional + commission
-        account["cash"] = max(0.0, cash)
-        account["quantity"] = quantity
-        account["position_entry_price"] = fill
-        account["position_entry_cost"] = notional + commission
-        event.update({
-            "status": "buy",
-            "fill_price": fill,
-            "quantity": quantity,
-            "fee": commission,
-        })
-        account["trade_count"] += 1
+        if quantity < float(min_order_size) or notional < float(min_notional):
+            account["rejected_min_size"] = int(account.get("rejected_min_size", 0)) + 1
+            event.update({
+                "status": "below_minimum_size",
+                "attempted_quantity": quantity,
+                "minimum_quantity": float(min_order_size),
+                "attempted_notional": notional,
+                "minimum_notional": float(min_notional),
+            })
+        else:
+            commission = notional * fee
+            cash -= notional + commission
+            account["cash"] = max(0.0, cash)
+            account["quantity"] = quantity
+            account["position_entry_price"] = fill
+            account["position_entry_cost"] = notional + commission
+            event.update({
+                "status": "buy",
+                "fill_price": fill,
+                "quantity": quantity,
+                "fee": commission,
+            })
+            account["trade_count"] += 1
 
     elif not signal and quantity > 0:
         fill = close * (1.0 - impact)
