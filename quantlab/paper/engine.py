@@ -102,6 +102,7 @@ def new_account(initial_cash):
         "cash": initial_cash,
         "quantity": 0.0,
         "position_entry_price": None,
+        "position_entry_cost": None,
         "realized_pnl": 0.0,
         "trade_count": 0,
         "last_bar": None,
