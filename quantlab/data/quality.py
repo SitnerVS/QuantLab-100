@@ -89,7 +89,9 @@ def analyze_dataset(path, timeframe, market_type, now=None):
         status = "WARN"
     elif age_hours is not None:
         stale_after = 4 * 24 if market_type == "forex" else 3 * 24
-        if age_hours > stale_after:
+        if age_hours < -1:
+            status = "FUTURE_DATA"
+        elif age_hours > stale_after:
             status = "STALE"
 
     return {
