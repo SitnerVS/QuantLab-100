@@ -205,6 +205,9 @@ def simulate_isolated_long(
     rows = []
 
     for index, row in data.iterrows():
+        # Backtests consume per-bar events below; retaining a full persistent ledger
+        # causes an unnecessary O(n^2) deep-copy cost in the simulation loop.
+        account["ledger"] = []
         time_col = next((col for col in ("timestamp", "datetime", "date") if col in data.columns), None)
         timestamp = str(row[time_col]) if time_col else str(index)
         account, event = apply_isolated_futures_signal(
