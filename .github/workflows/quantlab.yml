@@ -54,7 +54,9 @@ jobs:
           git add data/processed reports
           if ! git diff --cached --quiet; then
             git commit -m "Update QuantLab research outputs"
-            git push
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
           else
             echo "No report or state changes to commit."
           fi
