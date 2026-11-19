@@ -68,3 +68,29 @@ def walk_forward_evaluate(
             "test_win_rate_pct": float((returns > 0).mean() * 100.0),
         })
     return rows
+
+
+def summarize_walk_forward(rows):
+    """Aggregate fold results without selecting on in-sample performance."""
+    if not rows:
+        return pd.DataFrame(columns=[
+            "dataset", "strategy", "folds", "mean_test_return_pct",
+            "median_test_return_pct", "positive_fold_pct",
+            "median_test_max_drawdown_pct", "median_test_sharpe_annualized",
+        ])
+    frame = pd.DataFrame(rows)
+    summary = (
+        frame.groupby(["dataset", "strategy"], as_index=False)
+        .agg(
+            folds=("fold", "count"),
+            mean_test_return_pct=("test_return_pct", "mean"),
+            median_test_return_pct=("test_return_pct", "median"),
+            positive_fold_pct=("test_return_pct", lambda values: float((values > 0).mean() * 100)),
+            median_test_max_drawdown_pct=("test_max_drawdown_pct", "median"),
+            median_test_sharpe_annualized=("test_sharpe_annualized", "median"),
+        )
+    )
+    return summary.sort_values(
+        ["dataset", "median_test_return_pct"],
+        ascending=[True, False],
+    ).reset_index(drop=True)
