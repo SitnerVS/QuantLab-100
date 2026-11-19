@@ -29,7 +29,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 python -m quantlab.cli run --config config/settings.yaml
-python -m python -m pytest -q
+python -m pytest -q
 ```
 
 ## GitHub Actions
