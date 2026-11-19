@@ -67,7 +67,7 @@ def run_paper(cfg):
             },
         }
 
-    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name))
+    # Backward-compatible state migration from the initial signal-only prototype.\n    state.setdefault("schema_version", 2)\n    state.setdefault("accounts", {})\n    state.setdefault("unsupported_sleeves", {\n        "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",\n        "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated",\n    })\n\n    paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name))
     counts = {"crypto_spot": 0, "forex_spot_sim": 0}
     for path in paths:
         sleeve = _dataset_sleeve(path.name)
