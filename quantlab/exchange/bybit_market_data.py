@@ -86,9 +86,11 @@ def fetch_demo_market_data(
 
     report = {
         "checked_at_utc": now.isoformat(), "exchange": "Bybit", "environment": "MAINNET_PUBLIC_MARKET_DATA",
-        "market_data": summaries, "orders_submitted": 0, "real_trading_enabled": False,\n        "source_note": "Unauthenticated public market-data endpoint; Demo account credentials are not used.",
+        "market_data": summaries, "orders_submitted": 0, "real_trading_enabled": False,
+        "source_note": "Unauthenticated public market-data endpoint; Demo account credentials are not used.",
         "status": "DATA_RECEIVED",
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "
+", encoding="utf-8")
     return report
