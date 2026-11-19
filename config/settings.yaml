@@ -26,6 +26,10 @@ data:
     symbols: ["PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"]
     timeframe: "1h"
     limit: 720
+    min_order_sizes:
+      PF_XBTUSD: 0.0001
+      PF_ETHUSD: 0.001
+      PF_SOLUSD: 0.01
 
 costs:
   crypto_fee_rate: 0.0026
