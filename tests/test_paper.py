@@ -1,6 +1,7 @@
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
+from quantlab.paper.runner import _dataset_sleeve
 
 
 def test_buy_and_sell_updates_cash_and_realized_pnl():
@@ -59,3 +60,11 @@ def test_rub_capital_is_converted_to_usd_quote_currency():
 def test_rub_conversion_rejects_invalid_rate():
     with pytest.raises(ValueError):
         rub_to_usd(25, 0)
+
+
+def test_crypto_and_fx_datasets_map_to_separate_sleeves():
+    assert _dataset_sleeve("crypto_BTC_USD_1h.csv") == "crypto_spot"
+    assert _dataset_sleeve("forex_EURUSD=X_1d.csv") == "forex_spot_sim"
+    assert _dataset_sleeve("forex_GBPUSD=X_1d.csv") == "forex_spot_sim"
+    assert _dataset_sleeve("forex_JPY=X_1d.csv") is None
+    assert _dataset_sleeve("forex_RUB=X_1d.csv") is None
