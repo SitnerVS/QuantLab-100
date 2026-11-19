@@ -10,7 +10,7 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - Rolling chronological out-of-sample test windows for fixed causal signals, plus an aggregated ranking by median fold return and positive-fold share; these are evaluation folds, not parameter optimization.
 - Isolated-margin futures backtests for Kraken linear PF perpetuals using observed historical relative funding rates and mark-price candles; results are written separately from spot/FX reports.
 - Two separate virtual execution views: venue-constrained accounts reject orders below exchange minimums; a clearly labeled fractional shadow portfolio ignores lot minimums to study signal behavior at tiny balances and is explicitly non-executable. Both track spot/futures positions, wallet, margin, quantity, equity, realized/unrealized PnL, fees, funding and liquidations.
-- Paper execution is idempotent per completed candle and applies configurable fee, slippage and half-spread assumptions.
+- Paper execution is idempotent per completed candle, processes missed completed candles in chronological order from the persisted cursor, and applies configurable fee, slippage and half-spread assumptions.
 - GitHub Actions runs tests and research on pushes to main and hourly (UTC). The paper summary tracks a 72-hour baseline experiment window and its elapsed/remaining time; paper executions stop automatically at the end of the window.
 
 ## Important model boundaries

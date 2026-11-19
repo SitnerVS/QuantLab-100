@@ -187,6 +187,130 @@ def _snapshot_futures(account, latest, sleeve, key, bar_time, allocation_rub, us
 
 
 
+
+def _unprocessed_signal_rows(enriched, last_bar):
+    """Return every completed bar after the persisted cursor, with its prior-bar signal."""
+    if len(enriched) < 2:
+        return []
+    time_col = next((c for c in ("timestamp", "datetime", "date") if c in enriched.columns), None)
+    if time_col is None:
+        return [(len(enriched) - 1, int(enriched.iloc[-2]["ema_signal"]))]
+    timestamps = pd.to_datetime(enriched[time_col], utc=True, errors="coerce")
+    latest_index = len(enriched) - 1
+    if not last_bar:
+        indices = [latest_index]
+    else:
+        previous = pd.to_datetime(last_bar, utc=True, errors="coerce")
+        if pd.isna(previous):
+            indices = [latest_index]
+        elif previous < timestamps.iloc[0]:
+            print("[paper] State cursor is older than retained history; processing only the latest available candle.")
+            indices = [latest_index]
+        else:
+            indices = [
+                index for index in range(1, len(enriched))
+                if pd.notna(timestamps.iloc[index]) and timestamps.iloc[index] > previous
+            ]
+    return [
+        (index, int(enriched.iloc[index - 1]["ema_signal"]))
+        for index in indices
+        if index > 0
+    ]
+
+
+def _process_account_bars(cfg, account, enriched, sleeve, key, usd_rub_rate, experiment, ignore_venue_minimums=False):
+    pending = (
+        []
+        if experiment["status"] == "COMPLETED"
+        else _unprocessed_signal_rows(enriched, account.get("last_bar"))
+    )
+    account_events = []
+    for index, signal in pending:
+        latest = enriched.iloc[index].copy()
+        latest["paper_signal"] = signal
+        bar_time = pd.to_datetime(
+            latest.get("timestamp", latest.get("datetime", latest.get("date"))),
+            utc=True,
+        ).isoformat()
+        if sleeve == "crypto_futures_sim":
+            futures_cfg = cfg["futures"]
+            account, event = apply_isolated_futures_signal(
+                account,
+                signal,
+                float(latest["close"]),
+                float(latest["funding_rate"]),
+                bar_time,
+                leverage=float(futures_cfg["leverage"]),
+                max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                fee_rate=float(futures_cfg["fee_rate"]),
+                slippage_rate=float(futures_cfg["slippage_rate"]),
+                spread_rate=float(futures_cfg["spread_rate"]),
+                maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                min_order_size=(
+                    0.0 if ignore_venue_minimums
+                    else float(latest.get("min_order_size", 0.0))
+                ),
+            )
+        else:
+            costs = cfg["costs"]
+            account, event = apply_paper_signal(
+                account,
+                signal,
+                float(latest["close"]),
+                bar_time,
+                fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
+                slippage_rate=float(costs["slippage_rate"]),
+                spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
+                max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+                min_order_size=(
+                    0.0 if ignore_venue_minimums
+                    else float(latest.get("min_order_size", 0.0)) if sleeve == "crypto_spot" else 0.0
+                ),
+                min_notional=(
+                    0.0 if ignore_venue_minimums
+                    else float(latest.get("min_notional_usd", 0.0)) if sleeve == "crypto_spot" else 0.0
+                ),
+            )
+        event["backfilled"] = index < len(enriched) - 1
+        account_events.append(event)
+
+    if pending:
+        final_index, final_signal = pending[-1]
+    else:
+        final_index = len(enriched) - 1
+        final_signal = _paper_signal_for_latest(enriched)
+    latest = enriched.iloc[final_index].copy()
+    latest["paper_signal"] = int(final_signal or 0)
+    bar_time = pd.to_datetime(
+        latest.get("timestamp", latest.get("datetime", latest.get("date"))),
+        utc=True,
+    ).isoformat()
+
+    if sleeve == "crypto_futures_sim":
+        futures_cfg = cfg["futures"]
+        snapshot = _snapshot_futures(
+            account, latest, sleeve, key, bar_time,
+            float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+            leverage=float(futures_cfg["leverage"]),
+            max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+        )
+    else:
+        snapshot = _snapshot_spot(
+            account, latest, sleeve, key, bar_time,
+            float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
+            max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
+        )
+    if ignore_venue_minimums:
+        snapshot["execution_model"] = "fractional_shadow_ignore_venue_minimums"
+        snapshot["venue_minimums_ignored"] = True
+    else:
+        snapshot["venue_minimums_ignored"] = False
+    if experiment["status"] == "COMPLETED":
+        account_events.append({"timestamp": bar_time, "status": "experiment_completed"})
+    return account, account_events, snapshot
+
+
 def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rate, now):
     """Run a separate non-executable fractional-lot research portfolio."""
     events = []
@@ -207,13 +331,10 @@ def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rat
             latest_result = _latest_closed_bar(frame, path.name, cfg, now)
             if latest_result is None:
                 continue
-            latest_row, closed_frame = latest_result
+            _, closed_frame = latest_result
             enriched = build_signals(closed_frame)
-            signal = _paper_signal_for_latest(enriched)
-            if signal is None:
+            if len(enriched) < 2:
                 continue
-            latest = enriched.iloc[-1].copy()
-            latest["paper_signal"] = signal
 
             key = path.stem
             account = accounts.get(key)
@@ -230,62 +351,12 @@ def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rat
                 )
                 account["initial_capital_rub"] = allocation_rub
 
-            bar_time = pd.to_datetime(
-                latest_row.get("timestamp", latest_row.get("datetime", latest_row.get("date"))),
-                utc=True,
-            ).isoformat()
-
-            if experiment["status"] == "COMPLETED":
-                event = {"timestamp": bar_time, "status": "experiment_completed"}
-            elif sleeve == "crypto_futures_sim":
-                futures_cfg = cfg["futures"]
-                account, event = apply_isolated_futures_signal(
-                    account,
-                    signal,
-                    float(latest["close"]),
-                    float(latest["funding_rate"]),
-                    bar_time,
-                    leverage=float(futures_cfg["leverage"]),
-                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-                    fee_rate=float(futures_cfg["fee_rate"]),
-                    slippage_rate=float(futures_cfg["slippage_rate"]),
-                    spread_rate=float(futures_cfg["spread_rate"]),
-                    maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
-                    liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
-                    min_order_size=0.0,
-                )
-            else:
-                costs = cfg["costs"]
-                account, event = apply_paper_signal(
-                    account,
-                    signal,
-                    float(latest["close"]),
-                    bar_time,
-                    fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
-                    slippage_rate=float(costs["slippage_rate"]),
-                    spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
-                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-                    min_order_size=0.0,
-                    min_notional=0.0,
-                )
-
-            if sleeve == "crypto_futures_sim":
-                snapshot = _snapshot_futures(
-                    account, latest, sleeve, key, bar_time,
-                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
-                    leverage=float(futures_cfg["leverage"]),
-                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-                )
-            else:
-                snapshot = _snapshot_spot(
-                    account, latest, sleeve, key, bar_time,
-                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
-                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-                )
-            snapshot["execution_model"] = "fractional_shadow_ignore_venue_minimums"
-            snapshot["venue_minimums_ignored"] = True
+            account, account_events, snapshot = _process_account_bars(
+                cfg, account, enriched, sleeve, key, usd_rub_rate, experiment,
+                ignore_venue_minimums=True,
+            )
             accounts[key] = account
-            events.append({"dataset": key, "sleeve": sleeve, **event})
+            events.extend({"dataset": key, "sleeve": sleeve, **event} for event in account_events)
             snapshots.append(snapshot)
         except Exception as exc:
             print(f"[fractional shadow] ERROR {path.name}: {exc}")
@@ -471,14 +542,11 @@ def run_paper(cfg):
             if latest_result is None:
                 print(f"[paper] SKIP {path.name}: no completed candle yet")
                 continue
-            latest_row, closed_frame = latest_result
+            _, closed_frame = latest_result
             enriched = build_signals(closed_frame)
             if len(enriched) < 2:
                 print(f"[paper] SKIP {path.name}: insufficient bars for lagged signal")
                 continue
-            latest = enriched.iloc[-1].copy()
-            signal = _paper_signal_for_latest(enriched)
-            latest["paper_signal"] = signal
 
             key = path.stem
             account = state["accounts"].get(key)
@@ -494,62 +562,12 @@ def run_paper(cfg):
                     account = new_account(allocation_usd)
                 account["initial_capital_rub"] = allocation_rub
 
-            bar_time = pd.to_datetime(
-                latest_row.get("timestamp", latest_row.get("datetime", latest_row.get("date"))),
-                utc=True,
-            ).isoformat()
-
-            if sleeve == "crypto_futures_sim":
-                futures_cfg = cfg["futures"]
-                if experiment["status"] == "COMPLETED":
-                    event = {"timestamp": bar_time, "status": "experiment_completed"}
-                else:
-                    account, event = apply_isolated_futures_signal(
-                        account,
-                        signal,
-                        float(latest["close"]),
-                        float(latest["funding_rate"]),
-                        bar_time,
-                        leverage=float(futures_cfg["leverage"]),
-                        max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-                        fee_rate=float(futures_cfg["fee_rate"]),
-                        slippage_rate=float(futures_cfg["slippage_rate"]),
-                        spread_rate=float(futures_cfg["spread_rate"]),
-                        maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
-                        liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
-                        min_order_size=float(latest["min_order_size"]),
-                    )
-                snapshot = _snapshot_futures(
-                    account, latest, sleeve, key, bar_time,
-                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
-                    leverage=float(futures_cfg["leverage"]),
-                    max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-                )
-            else:
-                if experiment["status"] == "COMPLETED":
-                    event = {"timestamp": bar_time, "status": "experiment_completed"}
-                else:
-                    costs = cfg["costs"]
-                    account, event = apply_paper_signal(
-                        account,
-                        signal,
-                        float(latest["close"]),
-                        bar_time,
-                        fee_rate=float(costs["crypto_fee_rate"] if sleeve == "crypto_spot" else costs["forex_fee_rate"]),
-                        slippage_rate=float(costs["slippage_rate"]),
-                        spread_rate=float(costs.get("crypto_spread_rate" if sleeve == "crypto_spot" else "forex_spread_rate", 0.0)),
-                        max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-                        min_order_size=float(latest.get("min_order_size", 0.0)) if sleeve == "crypto_spot" else 0.0,
-                        min_notional=float(latest.get("min_notional_usd", 0.0)) if sleeve == "crypto_spot" else 0.0,
-                    )
-                snapshot = _snapshot_spot(
-                    account, latest, sleeve, key, bar_time,
-                    float(account.get("initial_capital_rub", 0.0)), usd_rub_rate,
-                    max_position_fraction=float(cfg.get("paper", {}).get("max_position_fraction", 1.0)),
-                )
-
+            account, account_events, snapshot = _process_account_bars(
+                cfg, account, enriched, sleeve, key, usd_rub_rate, experiment,
+                ignore_venue_minimums=False,
+            )
             state["accounts"][key] = account
-            events.append({"dataset": key, "sleeve": sleeve, **event})
+            events.extend({"dataset": key, "sleeve": sleeve, **event} for event in account_events)
             snapshots.append(snapshot)
         except Exception as exc:
             print(f"[paper] ERROR {path.name}: {exc}")

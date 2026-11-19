@@ -5,7 +5,7 @@ from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 from quantlab.paper.runner import (
     _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
     _portfolio_target_metrics, _run_fractional_shadow,
-    _write_experiment_status_report,
+    _write_experiment_status_report, _unprocessed_signal_rows,
 )
 
 
@@ -267,4 +267,33 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
     assert "cannot be placed at the exchange" in report
     assert "bb_signal" in report
     assert "Holm-adjusted p-value" in report
+
+
+
+def test_paper_cursor_processes_all_missed_completed_bars_in_order():
+    times = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    enriched = pd.DataFrame({
+        "timestamp": times,
+        "ema_signal": [0, 1, 0, 1, 1],
+    })
+    pending = _unprocessed_signal_rows(enriched, times[1].isoformat())
+    assert pending == [(2, 1), (3, 0), (4, 1)]
+
+
+def test_new_paper_account_starts_from_latest_bar_without_replaying_history():
+    times = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    enriched = pd.DataFrame({
+        "timestamp": times,
+        "ema_signal": [0, 1, 0, 1, 1],
+    })
+    assert _unprocessed_signal_rows(enriched, None) == [(4, 1)]
+
+
+def test_paper_cursor_does_not_reprocess_already_seen_bars():
+    times = pd.date_range("2026-01-01", periods=5, freq="h", tz="UTC")
+    enriched = pd.DataFrame({
+        "timestamp": times,
+        "ema_signal": [0, 1, 0, 1, 1],
+    })
+    assert _unprocessed_signal_rows(enriched, times[-1].isoformat()) == []
 
