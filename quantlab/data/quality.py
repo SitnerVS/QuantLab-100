@@ -58,6 +58,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
             "rows": int(len(frame)),
             "duplicate_timestamps": None,
             "missing_ohlcv_rows": None,
+            "missing_volume_rows": None,
             "invalid_ohlc_rows": None,
             "max_gap_hours": None,
             "last_bar_age_hours": None,
