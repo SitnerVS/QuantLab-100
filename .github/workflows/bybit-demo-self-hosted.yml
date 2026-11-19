@@ -1,8 +1,7 @@
-name: Bybit Demo connection (self-hosted EU runner)
+name: Bybit Demo connection and market data (self-hosted EU runner)
 
 on:
   workflow_dispatch:
-  # Run automatically when this workflow file changes, to validate runner fixes.
   push:
     branches: [main]
     paths:
@@ -42,11 +41,20 @@ jobs:
           BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
         run: .venv/bin/python -m quantlab.exchange.cli
 
-      - name: Upload connection report
+      - name: Download completed Bybit Demo linear candles (read-only)
+        env:
+          BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
+          BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
+        run: .venv/bin/python -m quantlab.exchange.market_data_cli
+
+      - name: Upload connection and market-data reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bybit-demo-connection-${{ github.run_number }}
-          path: reports/bybit_demo_connection.json
+          name: bybit-demo-read-only-${{ github.run_number }}
+          path: |
+            reports/bybit_demo_connection.json
+            reports/bybit_demo_market_data.json
+            data/raw/bybit_demo_linear_*.csv
           if-no-files-found: warn
           retention-days: 7
