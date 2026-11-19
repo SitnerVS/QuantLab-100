@@ -88,9 +88,9 @@ def run_paper(cfg):
         }
 
     # Backward-compatible state migration from the initial signal-only prototype.
-    if int(state.get("schema_version", 1)) < 4:
+    if int(state.get("schema_version", 1)) < 5:
         state["accounts"] = {}
-    state["schema_version"] = 4
+    state["schema_version"] = 5
     state.setdefault("accounts", {})
     state.setdefault("unsupported_sleeves", {
         "crypto_futures_sim": "disabled_until_futures_margin_engine_is_validated",
