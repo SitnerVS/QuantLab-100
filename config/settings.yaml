@@ -18,7 +18,7 @@ data:
     timeframe: "1h"
     limit: 1000
   forex:
-    symbols: ["EURUSD=X", "GBPUSD=X", "JPY=X"]
+    symbols: ["EURUSD=X", "GBPUSD=X", "JPY=X", "RUB=X"]
     interval: "1d"
     period: "2y"
 
