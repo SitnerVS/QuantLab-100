@@ -124,7 +124,7 @@ def run_data_quality(cfg):
     ]
     report = pd.DataFrame(rows)
     report.to_csv(REPORTS / "data_quality.csv", index=False)
-    usable = int(report["status"].isin(["OK", "WARN", "STALE"]).sum())
+    usable = int(report["status"].isin(["OK", "STALE"]).sum())
     print(report[["dataset", "status", "rows", "duplicate_timestamps", "missing_ohlcv_rows"]].to_string(index=False))
     print(f"Data quality: {usable}/{len(report)} expected datasets available.")
     if usable == 0:
