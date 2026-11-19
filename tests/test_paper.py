@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
