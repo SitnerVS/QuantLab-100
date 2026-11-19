@@ -98,6 +98,8 @@ def test_duplicate_timestamps_and_invalid_ohlc_are_flagged(tmp_path):
         "low": [99.0] * 60,
         "close": [101.0] * 60,
         "volume": [10.0] * 60,
+        "min_order_size": [0.0001] * 60,
+        "min_notional_usd": [0.5] * 60,
     })
     frame.loc[0, "high"] = 98.0
     frame.to_csv(path, index=False)
