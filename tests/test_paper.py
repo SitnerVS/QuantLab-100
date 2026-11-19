@@ -1,7 +1,7 @@
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
-from quantlab.paper.runner import _dataset_sleeve, _paper_signal_for_latest
+from quantlab.paper.runner import _dataset_sleeve, _paper_signal_for_latest, _experiment_window
 
 
 def test_buy_and_sell_updates_cash_and_realized_pnl():
@@ -87,3 +87,13 @@ def test_paper_runner_uses_previous_completed_bar_signal():
     frame = pd.DataFrame({"ema_signal": [0, 1, 0]})
     assert _paper_signal_for_latest(frame) == 1
     assert _paper_signal_for_latest(frame.iloc[:1]) is None
+
+
+def test_72_hour_experiment_window_is_deterministic():
+    start = "2026-01-01T00:00:00+00:00"
+    now = pd.Timestamp("2026-01-02T12:00:00Z").to_pydatetime()
+    window = _experiment_window(start, now)
+    assert window["status"] == "RUNNING"
+    assert window["elapsed_hours"] == pytest.approx(36)
+    assert window["remaining_hours"] == pytest.approx(36)
+    assert window["end_utc"].startswith("2026-01-04T00:00:00")
