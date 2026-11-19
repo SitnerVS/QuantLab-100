@@ -60,6 +60,8 @@ def test_collects_true_mark_candles_funding_and_contract_rules(tmp_path):
     assert float(rows[1]["funding_rate"]) == 0
     assert float(rows[0]["min_order_size"]) == pytest.approx(0.001)
     assert report["price_basis"] == "mark"
+    assert report["environment"] == "MAINNET_PUBLIC_MARKET_DATA"
+    assert report["market_data_endpoint"] == "api.bytick.com"
     assert report["history_days_requested"] == 1
     assert report["status"] == "FUTURES_DATA_RECEIVED"
     assert report["orders_submitted"] == 0
