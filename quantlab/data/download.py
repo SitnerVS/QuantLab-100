@@ -142,6 +142,11 @@ def download_futures(cfg):
             if market is None or not market.get("swap") or not market.get("linear"):
                 raise RuntimeError(f"{instrument} is not an available linear perpetual contract")
             symbol = market["symbol"]
+            minimum = section.get("min_order_sizes", {}).get(instrument)
+            if minimum is None:
+                minimum = market.get("limits", {}).get("amount", {}).get("min")
+            if minimum is None or float(minimum) <= 0:
+                raise RuntimeError(f"minimum contract quantity is unavailable for {instrument}")
             candles = exchange.fetch_ohlcv(
                 symbol,
                 timeframe=section.get("timeframe", "1h"),
@@ -171,6 +176,7 @@ def download_futures(cfg):
             missing_funding = int(frame["funding_rate"].isna().sum())
             frame = frame.dropna(subset=["funding_rate"])
             frame, dropped = _filter_valid_ohlc(frame, require_volume=True)
+            frame["min_order_size"] = float(minimum)
             if frame.empty or len(frame) < 60:
                 raise RuntimeError(
                     f"insufficient aligned mark/funding history; missing funding candles={missing_funding}"
