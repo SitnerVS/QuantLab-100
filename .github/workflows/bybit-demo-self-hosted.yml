@@ -43,6 +43,7 @@ jobs:
         run: .venv/bin/python -m quantlab.exchange.cli
 
       - name: Download completed Bybit Demo linear candles (read-only)
+        continue-on-error: true
         env:
           BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
           BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
