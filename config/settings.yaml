@@ -46,8 +46,8 @@ paper:
   max_position_fraction: 0.25
 
 validation:
-  train_bars: 180
-  test_bars: 60
+  train_bars: 1440  # 60 days of hourly bars
+  test_bars: 336   # 14 days of hourly bars
 
 futures:
   leverage: 2.0
