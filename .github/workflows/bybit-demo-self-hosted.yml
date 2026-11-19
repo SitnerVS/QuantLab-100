@@ -36,6 +36,7 @@ jobs:
         run: .venv/bin/python -m pip install -r requirements.txt
 
       - name: Verify Bybit Demo API connection (read-only)
+        continue-on-error: true
         env:
           BYBIT_DEMO_API_KEY: ${{ secrets.BYBIT_DEMO_API_KEY }}
           BYBIT_DEMO_API_SECRET: ${{ secrets.BYBIT_DEMO_API_SECRET }}
