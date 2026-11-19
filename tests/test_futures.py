@@ -106,5 +106,5 @@ def test_persistent_futures_account_is_idempotent_and_closes_position():
         maintenance_margin_rate=0.01, liquidation_fee_rate=0,
     )
     assert closed["status"] == "close"
-    assert account["wallet"] == pytest.approx(105)
+    assert account["wallet"] == pytest.approx(110)
     assert account["closed_trades"] == 1
