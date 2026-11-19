@@ -62,5 +62,7 @@ jobs:
             reports/bybit_demo_futures_backtest.json
             reports/bybit_demo_futures_backtest_summary.csv
             reports/bybit_demo_futures_walk_forward.csv
+            reports/bybit_demo_futures_long_short_summary.csv
+            reports/bybit_demo_futures_long_short_walk_forward.csv
           if-no-files-found: warn
           retention-days: 14
