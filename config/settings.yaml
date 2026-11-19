@@ -26,6 +26,8 @@ costs:
   crypto_fee_rate: 0.001
   forex_fee_rate: 0.0002
   slippage_rate: 0.0005
+  crypto_spread_rate: 0.0002
+  forex_spread_rate: 0.0003
 
 backtest:
   initial_cash: 100.0
