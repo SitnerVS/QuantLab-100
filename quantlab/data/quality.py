@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +6,11 @@ import pandas as pd
 RAW = Path("data/raw")
 REPORTS = Path("reports")
 OHLCV = ["open", "high", "low", "close", "volume"]
+TIMEFRAME_MINUTES = {
+    "1m": 1, "5m": 5, "15m": 15, "30m": 30,
+    "1h": 60, "2h": 120, "4h": 240, "1d": 1440,
+    "1wk": 10080,
+}
 
 
 def _expected_datasets(cfg):
@@ -26,6 +31,13 @@ def _expected_datasets(cfg):
     return expected
 
 
+def _bar_duration(timeframe):
+    minutes = TIMEFRAME_MINUTES.get(timeframe)
+    if minutes is None:
+        raise ValueError(f"Unsupported data-quality timeframe: {timeframe}")
+    return timedelta(minutes=minutes)
+
+
 def analyze_dataset(path, timeframe, market_type, now=None):
     now = now or datetime.now(timezone.utc)
     if not path.exists():
@@ -35,6 +47,8 @@ def analyze_dataset(path, timeframe, market_type, now=None):
             "missing_volume_rows": None, "missing_funding_rows": None,
             "invalid_ohlc_rows": None, "min_order_size": None, "min_notional_usd": None, "max_gap_hours": None,
             "last_bar_age_hours": None, "first_bar_utc": None, "last_bar_utc": None,
+            "last_bar_close_utc": None,
+            "last_bar_close_utc": None,
         }
 
     frame = pd.read_csv(path)
@@ -99,7 +113,11 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     gaps = valid_times.diff().dropna().dt.total_seconds() / 3600
     max_gap = float(gaps.max()) if not gaps.empty else 0.0
     last_time = valid_times.iloc[-1] if not valid_times.empty else None
-    age_hours = (now - last_time.to_pydatetime()).total_seconds() / 3600 if last_time is not None else None
+    last_close_time = last_time + _bar_duration(timeframe) if last_time is not None else None
+    age_hours = (
+        (now - last_close_time.to_pydatetime()).total_seconds() / 3600
+        if last_close_time is not None else None
+    )
 
     status = "OK"
     if len(frame) < 60 or valid_times.empty:
@@ -129,6 +147,7 @@ def analyze_dataset(path, timeframe, market_type, now=None):
         "last_bar_age_hours": age_hours,
         "first_bar_utc": valid_times.iloc[0].isoformat() if not valid_times.empty else None,
         "last_bar_utc": last_time.isoformat() if last_time is not None else None,
+        "last_bar_close_utc": last_close_time.isoformat() if last_close_time is not None else None,
     }
 
 

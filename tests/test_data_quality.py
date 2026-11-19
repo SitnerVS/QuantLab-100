@@ -136,3 +136,26 @@ def test_futures_dataset_requires_funding_rate(tmp_path):
     )
     assert result["status"] == "OK"
     assert result["missing_funding_rows"] == 0
+
+
+def test_last_bar_age_is_measured_from_candle_close(tmp_path):
+    path = tmp_path / "daily_fx.csv"
+    times = pd.date_range("2026-01-01", periods=60, freq="D", tz="UTC")
+    frame = pd.DataFrame({
+        "date": times,
+        "open": [1.1] * 60,
+        "high": [1.2] * 60,
+        "low": [1.0] * 60,
+        "close": [1.15] * 60,
+        "volume": [float("nan")] * 60,
+    })
+    frame.to_csv(path, index=False)
+    result = analyze_dataset(
+        path,
+        "1d",
+        "forex",
+        now=datetime(2026, 3, 2, 6, tzinfo=timezone.utc),
+    )
+    assert result["last_bar_close_utc"] == "2026-03-02T00:00:00+00:00"
+    assert result["last_bar_age_hours"] == 6.0
+
