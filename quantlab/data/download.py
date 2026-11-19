@@ -64,11 +64,19 @@ def download_crypto(cfg):
     exchange_name = section.get("exchange", "kraken")
     exchange_cls = getattr(ccxt, exchange_name)
     exchange = exchange_cls({"enableRateLimit": True})
+    exchange.load_markets()
     RAW.mkdir(parents=True, exist_ok=True)
 
     for symbol in section["symbols"]:
         safe_symbol = symbol.replace("/", "_")
         try:
+            market = exchange.market(symbol)
+            limits = market.get("limits", {})
+            info = market.get("info", {})
+            min_order_size = limits.get("amount", {}).get("min") or info.get("ordermin")
+            min_notional = limits.get("cost", {}).get("min") or info.get("costmin") or 0.0
+            if min_order_size is None or float(min_order_size) <= 0:
+                raise RuntimeError(f"minimum order quantity is unavailable for {symbol}")
             rows = exchange.fetch_ohlcv(
                 symbol,
                 timeframe=section["timeframe"],
@@ -81,6 +89,8 @@ def download_crypto(cfg):
             frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
             frame = _completed_bars(frame, "timestamp", section["timeframe"])
             frame, dropped = _filter_valid_ohlc(frame, require_volume=True)
+            frame["min_order_size"] = float(min_order_size)
+            frame["min_notional_usd"] = float(min_notional)
             if frame.empty:
                 raise RuntimeError("source returned no completed OHLCV candles")
             frame.to_csv(
