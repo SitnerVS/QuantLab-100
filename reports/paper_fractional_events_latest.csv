@@ -1,9 +1,1 @@
-dataset,sleeve,status,timestamp
-crypto_BTC_USD_1h,crypto_spot,duplicate_bar,
-crypto_ETH_USD_1h,crypto_spot,duplicate_bar,
-crypto_SOL_USD_1h,crypto_spot,duplicate_bar,
-forex_EURUSD=X_1d,forex_spot_sim,duplicate_bar,
-forex_GBPUSD=X_1d,forex_spot_sim,duplicate_bar,
-futures_PF_ETHUSD_1h,crypto_futures_sim,duplicate_bar,2026-11-19T12:00:00+00:00
-futures_PF_SOLUSD_1h,crypto_futures_sim,duplicate_bar,2026-11-19T12:00:00+00:00
-futures_PF_XBTUSD_1h,crypto_futures_sim,duplicate_bar,2026-11-19T12:00:00+00:00
+
