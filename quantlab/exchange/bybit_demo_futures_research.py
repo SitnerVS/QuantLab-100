@@ -170,7 +170,9 @@ def run_bybit_demo_futures_backtests(
     futures_cfg = cfg["futures"]
     initial_cash = float(cfg.get("backtest", {}).get("initial_cash", 100.0))
     min_observations = int(cfg.get("backtest", {}).get("min_observations", 60))
-    validation_cfg = cfg.get("validation", {})
+    validation_cfg = cfg.get(
+        "bybit_demo_futures_validation", cfg.get("validation", {})
+    )
     train_bars = int(validation_cfg.get("train_bars", 180))
     test_bars = int(validation_cfg.get("test_bars", 60))
     paths = sorted(data_dir.glob("bybit_demo_linear_*_60.csv"))
