@@ -43,6 +43,8 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     required_columns = OHLCV if market_type in ("crypto", "futures") else ["open", "high", "low", "close"]
     if market_type == "futures":
         required_columns = required_columns + ["funding_rate", "min_order_size"]
+    elif market_type == "crypto":
+        required_columns = required_columns + ["min_order_size", "min_notional_usd"]
     if time_col is None or not set(required_columns).issubset(frame.columns):
         return {
             "dataset": path.name, "market_type": market_type, "status": "INVALID_SCHEMA",
@@ -70,6 +72,12 @@ def analyze_dataset(path, timeframe, market_type, now=None):
     invalid_rows = int(invalid.fillna(True).sum())
     if market_type in ("crypto", "futures") and "volume" in frame.columns:
         invalid_rows += int((pd.to_numeric(frame["volume"], errors="coerce") < 0).fillna(True).sum())
+    if market_type in ("crypto", "futures"):
+        min_size = pd.to_numeric(frame["min_order_size"], errors="coerce")
+        invalid_rows += int((min_size.replace([float("inf"), float("-inf")], float("nan")) <= 0).fillna(True).sum())
+    if market_type == "crypto":
+        min_notional = pd.to_numeric(frame["min_notional_usd"], errors="coerce")
+        invalid_rows += int((min_notional.replace([float("inf"), float("-inf")], float("nan")) < 0).fillna(True).sum())
     if market_type == "futures":
         funding_numeric = pd.to_numeric(frame["funding_rate"], errors="coerce")
         invalid_rows += int(
