@@ -21,9 +21,29 @@ TIMEFRAME_MINUTES = {
 def _dataset_sleeve(filename):
     if filename.startswith("crypto_"):
         return "crypto_spot"
-    if filename.startswith("forex_"):
+    if filename.startswith("forex_") and "EURUSD=X" in filename:
+        return "forex_spot_sim"
+    if filename.startswith("forex_") and "GBPUSD=X" in filename:
         return "forex_spot_sim"
     return None
+
+
+def _latest_usd_rub_rate(cfg, now):
+    path = RAW / "forex_RUB=X_1d.csv"
+    if not path.exists():
+        raise RuntimeError("USD/RUB conversion dataset forex_RUB=X_1d.csv is missing")
+    frame = pd.read_csv(path)
+    frame.columns = [str(col).lower() for col in frame.columns]
+    result = _latest_closed_bar(frame, path.name, cfg, now)
+    if result is None:
+        raise RuntimeError("no completed USD/RUB conversion candle")
+    row, _ = result
+    rate = float(row["close"])
+    if rate <= 0:
+        raise RuntimeError("invalid USD/RUB conversion rate")
+    return rate, pd.to_datetime(
+        row.get("date", row.get("datetime", row.get("timestamp"))), utc=True
+    ).isoformat()
 
 
 def _bar_duration(filename, cfg):
@@ -75,6 +95,12 @@ def run_paper(cfg):
         "forex_leveraged_sim": "disabled_until_leverage_and_margin_engine_is_validated",
     })
 
+    usd_rub_rate, fx_timestamp = _latest_usd_rub_rate(cfg, now)
+    state["base_currency"] = "RUB"
+    state["quote_currency"] = "USD"
+    state["usd_rub_rate"] = usd_rub_rate
+    state["usd_rub_timestamp_utc"] = fx_timestamp
+
     paths = sorted(p for p in RAW.glob("*.csv") if _dataset_sleeve(p.name))
     counts = {"crypto_spot": 0, "forex_spot_sim": 0}
     for path in paths:
@@ -103,8 +129,10 @@ def run_paper(cfg):
             account = state["accounts"].get(key)
             if account is None:
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
-                allocation = sleeve_capital / max(1, counts[sleeve])
-                account = new_account(allocation)
+                allocation_rub = sleeve_capital / max(1, counts[sleeve])
+                allocation_usd = allocation_rub / usd_rub_rate
+                account = new_account(allocation_usd)
+                account["initial_capital_rub"] = allocation_rub
 
             signal = int(latest["ema_signal"])
             bar_time = pd.to_datetime(
@@ -131,10 +159,13 @@ def run_paper(cfg):
                 "bar_time_utc": bar_time,
                 "close": float(latest["close"]),
                 "signal": signal,
-                "cash": float(account["cash"]),
+                "cash_usd": float(account["cash"]),
                 "quantity": float(account["quantity"]),
-                "equity": equity,
-                "realized_pnl": float(account["realized_pnl"]),
+                "equity_usd": equity,
+                "equity_rub_estimate": equity * usd_rub_rate,
+                "usd_rub_rate": usd_rub_rate,
+                "realized_pnl_usd": float(account["realized_pnl"]),
+                "realized_pnl_rub_estimate": float(account["realized_pnl"]) * usd_rub_rate,
                 "unrealized_pnl": (
                     float(account["quantity"]) * (float(latest["close"]) - float(account["position_entry_price"]))
                     if account["quantity"] > 0 and account["position_entry_price"] is not None else 0.0
