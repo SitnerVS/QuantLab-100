@@ -12,6 +12,7 @@ def walk_forward_evaluate(
     slippage_rate=0.0005,
     initial_cash=100.0,
     periods_per_year=252,
+    spread_rate=0.0,
 ):
     """Evaluate a fixed causal signal over rolling chronological test windows.
 
@@ -31,6 +32,7 @@ def walk_forward_evaluate(
         slippage_rate=slippage_rate,
         initial_cash=initial_cash,
         periods_per_year=periods_per_year,
+        spread_rate=spread_rate,
     )
     rows = []
     fold = 0
