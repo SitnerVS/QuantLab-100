@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-20T09:50:42.330566+00:00
+Updated (UTC): 2026-11-20T09:52:41.098009+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 20.33 h; remaining: 51.67 h
+Elapsed: 20.36 h; remaining: 51.64 h
 
 ## Target
 
@@ -47,9 +47,9 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 
 | Dataset | Strategy | Median OOS return | Positive folds | Folds |
 |---|---|---:|---:|---:|
-| futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0159% | 55.6% | 9 |
-| futures_PF_SOLUSD_1h.csv | donchian_signal | +0.0000% | 11.1% | 9 |
-| futures_PF_SOLUSD_1h.csv | sma_signal | +0.0000% | 22.2% | 9 |
+| futures_PF_XBTUSD_1h.csv | rsi_signal | -0.0021% | 44.4% | 9 |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.1825% | 33.3% | 9 |
+| futures_PF_ETHUSD_1h.csv | rsi_signal | -0.2790% | 22.2% | 9 |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
