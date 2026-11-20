@@ -96,3 +96,32 @@ def test_long_short_futures_walk_forward_applies_risk_controls():
     assert len(rows) == 3
     assert all("test_stop_losses" in row for row in rows)
     assert all("test_kill_switches" in row for row in rows)
+
+
+
+def test_long_short_walk_forward_kill_switch_resets_between_folds():
+    frame = pd.DataFrame({
+        "open": [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0],
+        "high": [100.0, 101.0, 101.0, 101.0, 101.0, 101.0, 101.0],
+        "low": [100.0, 99.0, 99.0, 99.0, 80.0, 99.0, 99.0],
+        "close": [100.0, 100.0, 100.0, 100.0, 80.0, 100.0, 100.0],
+        "direction": [1, 1, 1, 1, 1, 1, 1],
+        "funding_rate": [0.0] * 7,
+        "min_order_size": [0.0] * 7,
+        "min_notional_usd": [0.0] * 7,
+    })
+    cfg = {
+        "leverage": 2.0,
+        "max_margin_fraction": 0.5,
+        "maintenance_margin_rate": 0.01,
+        "liquidation_fee_rate": 0.0,
+    }
+    rows = walk_forward_futures_long_short_evaluate(
+        frame, "direction", cfg, train_bars=3, test_bars=2,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        max_drawdown_pct=0.05,
+    )
+    assert len(rows) == 2
+    assert rows[0]["test_kill_switches"] == 1
+    assert rows[1]["test_kill_switches"] == 0
+    assert rows[1]["test_observations"] == 2
