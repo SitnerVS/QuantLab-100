@@ -65,6 +65,7 @@ def run_backtests(cfg):
                 spread = float(futures_cfg["spread_rate"])
                 stop_loss_pct = futures_cfg.get("stop_loss_pct", 0.02)
                 max_drawdown_pct = futures_cfg.get("max_drawdown_pct", 0.10)
+                futures_validation_cfg = cfg.get("futures_validation", validation_cfg)
                 directional = build_direction_signals(enriched)
                 direction_columns = {
                     "ema_signal": "ema_direction",
@@ -120,8 +121,8 @@ def run_backtests(cfg):
                         enriched,
                         strategy,
                         futures_cfg,
-                        train_bars=int(validation_cfg.get("train_bars", 180)),
-                        test_bars=int(validation_cfg.get("test_bars", 60)),
+                        train_bars=int(futures_validation_cfg.get("train_bars", 180)),
+                        test_bars=int(futures_validation_cfg.get("test_bars", 60)),
                         fee_rate=fee,
                         slippage_rate=slippage,
                         spread_rate=spread,
@@ -164,10 +165,7 @@ def run_backtests(cfg):
                                 float(ls_returns.mean() / ls_std * (8760 ** 0.5))
                                 if pd.notna(ls_std) and ls_std > 0 else 0.0
                             ),
-                            "median_bar_turnover_usd": float(
-                                (ls_result["position"].abs() * ls_result["close"]).median()
-                            ),
-                        })
+                         })
                         futures_long_short_rows.append({
                             "dataset": path.name,
                             "strategy": strategy,
