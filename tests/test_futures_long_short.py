@@ -208,3 +208,25 @@ def test_risk_thresholds_must_be_between_zero_and_one():
         apply_long_short_signal(
             account, 0, 100, 0, "bad-dd", max_drawdown_pct=0.0,
         )
+
+
+
+def test_drawdown_kill_switch_uses_intrabar_adverse_extreme():
+    frame = pd.DataFrame({
+        "open": [100, 100, 100],
+        "high": [100, 101, 101],
+        "low": [100, 99, 80],
+        "close": [100, 100, 100],
+        "direction_signal": [1, 1, 1],
+        "funding_rate": [0.0, 0.0, 0.0],
+    })
+    result, metrics = simulate_isolated_long_short(
+        frame, initial_cash=100, leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        max_drawdown_pct=0.05,
+    )
+    assert result.iloc[-1]["event"] == "max_drawdown_kill_switch"
+    assert bool(result.iloc[-1]["drawdown_kill_switch"]) is True
+    assert result.iloc[-1]["equity"] == pytest.approx(80.0)
+    assert metrics["drawdown_kill_switch"] is True
