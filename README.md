@@ -11,10 +11,10 @@ Research-first paper-trading lab for crypto and FX. **Paper mode only: no real o
 - Isolated-margin futures backtests for Kraken linear PF perpetuals using observed historical relative funding rates and mark-price candles; results are written separately from spot/FX reports.
 - Two separate virtual execution views: venue-constrained accounts reject orders below exchange minimums; a clearly labeled fractional shadow portfolio ignores lot minimums to study signal behavior at tiny balances and is explicitly non-executable. Both track spot/futures positions, wallet, margin, quantity, equity, realized/unrealized PnL, fees, funding and liquidations.
 - Paper execution is idempotent per completed candle, processes missed completed candles in chronological order from the persisted cursor, and applies configurable fee, slippage and half-spread assumptions.
-- GitHub Actions runs tests and research on pushes to main and hourly (UTC). The paper summary tracks a 72-hour baseline experiment window and its elapsed/remaining time; paper executions stop automatically at the end of the window.
+- GitHub Actions runs tests and research on pushes to main and hourly (UTC). The paper engine is configured for continuous processing beyond the initial 72-hour benchmark window; scheduled Actions are still periodic jobs, not a continuously running execution daemon.
 
 ## Important model boundaries
-- The 100 RUB to 10,000 RUB in 72 hours objective is an extreme experimental target, not a forecast or promise.
+- Rapid or guaranteed wealth is not a valid system requirement. The objective is positive risk-adjusted expectancy over a meaningful sample, with strict drawdown limits; hourly/daily profit is never guaranteed.
 - Four sleeves are budgeted at 25 RUB each. Enabled crypto spot and EUR/USD + GBP/USD proxy accounts convert their RUB allocation to USD using the latest completed Yahoo Finance USD/RUB (RUB=X) daily close. Portfolio snapshots show USD balances and an estimated RUB equivalent. JPY=X (USD/JPY) is research-only because its quote currency differs. The crypto futures sleeve is enabled in persistent paper accounts with 2x leverage, observed hourly funding, mark-price candles, minimum contract quantities and EEA Level-I maintenance margin. The model uses a fixed 5% maintenance rate and a 2.5% full-liquidation-fee assumption; it does not reproduce partial liquidation, portfolio-wide margin or tick-level execution. Kraken EEA minimum lots are 0.0001 BTC, 0.001 ETH and 0.01 SOL. At the current 100 RUB budget and allocation, crypto spot/futures orders are below venue minimums and are rejected rather than simulated as fills. The summary separates the 50 RUB crypto allocation blocked by minimum lots, the 25 RUB theoretical FX-proxy allocation, and the 25 RUB inactive leveraged-FX allocation. The leveraged FX sleeve remains inactive.
 - The FX symbols from Yahoo Finance are research proxies, not broker-grade executable bid/ask data. In particular, JPY=X is not a broker-specific USD/JPY feed. Yahoo FX volume is not a centralized traded-volume feed; missing values are normalized to zero and volume is not used by the current signals. Malformed OHLC rows are filtered before research.
 - Paper fills use completed-bar close as a reference price plus conservative fee/spread/slippage adjustments. They are not order-book fills and do not model latency or partial fills.
@@ -50,6 +50,10 @@ The workflow runs tests and the research pipeline on pushes to main, pull reques
 - `reports/paper_fractional_portfolio_latest.csv` and `reports/paper_fractional_portfolio_summary.csv` — non-executable fractional shadow balances and performance.
 - `reports/paper_events_latest.csv` — latest virtual fills and position events.
 
+
+## Continuous trading architecture
+
+The target architecture, operating stages, risk guardrails and release gates are documented in [docs/CONTINUOUS_TRADING_PLAN.md](docs/CONTINUOUS_TRADING_PLAN.md). The current repository remains paper-only: there is no live order adapter enabled.
 
 ## Roadmap
 1. Validate the persistent futures paper engine's funding and liquidation results against Kraken venue specifications and add more granular mark-price execution modelling.
