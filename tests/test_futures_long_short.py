@@ -131,3 +131,80 @@ def test_positive_funding_is_paid_by_open_long():
     )
     assert event["funding_payment"] == pytest.approx(1.0)
     assert account["position"]["margin_balance"] == pytest.approx(49.0)
+
+
+def test_long_position_uses_intrabar_stop_loss():
+    frame = pd.DataFrame({
+        "open": [100, 100, 100],
+        "high": [100, 103, 104],
+        "low": [100, 99, 97],
+        "close": [100, 101, 99],
+        "direction_signal": [1, 1, 1],
+        "funding_rate": [0.0, 0.0, 0.0],
+    })
+    result, metrics = simulate_isolated_long_short(
+        frame, initial_cash=100, leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        stop_loss_pct=0.02,
+    )
+    assert result["event"].tolist() == ["hold", "open", "stop_loss"]
+    assert result.iloc[-1]["stop_loss_triggered"] is True
+    assert result.iloc[-1]["position"] == 0
+    assert result.iloc[-1]["equity"] == pytest.approx(98.0)
+    assert metrics["stop_losses"] == 1
+
+
+def test_short_position_uses_intrabar_stop_loss():
+    frame = pd.DataFrame({
+        "open": [100, 100, 100],
+        "high": [100, 101, 103],
+        "low": [100, 99, 98],
+        "close": [100, 100, 101],
+        "direction_signal": [-1, -1, -1],
+        "funding_rate": [0.0, 0.0, 0.0],
+    })
+    result, metrics = simulate_isolated_long_short(
+        frame, initial_cash=100, leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        stop_loss_pct=0.02,
+    )
+    assert result.iloc[-1]["event"] == "stop_loss"
+    assert result.iloc[-1]["equity"] == pytest.approx(98.0)
+    assert metrics["stop_losses"] == 1
+
+
+def test_account_drawdown_kill_switch_closes_and_prevents_new_positions():
+    frame = pd.DataFrame({
+        "open": [100, 100, 94, 94],
+        "high": [100, 101, 95, 95],
+        "low": [100, 99, 93, 93],
+        "close": [100, 100, 94, 94],
+        "direction_signal": [1, 1, 1, 1],
+        "funding_rate": [0.0, 0.0, 0.0, 0.0],
+    })
+    result, metrics = simulate_isolated_long_short(
+        frame, initial_cash=100, leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        max_drawdown_pct=0.05,
+    )
+    assert result.iloc[2]["event"] == "max_drawdown_kill_switch"
+    assert result.iloc[2]["drawdown_kill_switch"] is True
+    assert result.iloc[2]["halted"] is True
+    assert result.iloc[2]["position"] == 0
+    assert result.iloc[3]["position"] == 0
+    assert metrics["drawdown_kill_switch"] is True
+
+
+def test_risk_thresholds_must_be_between_zero_and_one():
+    account = new_long_short_account(100)
+    with pytest.raises(ValueError, match="stop_loss_pct"):
+        apply_long_short_signal(
+            account, 0, 100, 0, "bad-stop", stop_loss_pct=1.0,
+        )
+    with pytest.raises(ValueError, match="max_drawdown_pct"):
+        apply_long_short_signal(
+            account, 0, 100, 0, "bad-dd", max_drawdown_pct=0.0,
+        )
