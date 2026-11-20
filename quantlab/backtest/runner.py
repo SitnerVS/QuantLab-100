@@ -75,6 +75,7 @@ def run_backtests(cfg):
                     "sma_signal": "sma_direction",
                     "macd_signal": "macd_direction",
                     "roc_signal": "roc_direction",
+                    "adx_signal": "adx_direction",
                 }
                 for strategy in STRATEGIES:
                     result, metrics = simulate_isolated_long(
