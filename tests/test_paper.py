@@ -1,7 +1,10 @@
+import json
+
 import pandas as pd
 import pytest
 
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
+from quantlab.paper.persistence import exclusive_file_lock, write_json_atomic
 from quantlab.paper.runner import (
     _dataset_sleeve, _paper_signal_for_latest, _experiment_window,
     _portfolio_target_metrics, _run_fractional_shadow,
@@ -394,3 +397,22 @@ def test_continuous_paper_keeps_processing_bars_after_72_hour_benchmark():
     assert updated["last_bar"] == times[-1].isoformat()
     assert snapshot["quantity"] > 0
     assert all(event["status"] != "experiment_completed" for event in events)
+
+
+
+def test_atomic_state_write_preserves_valid_json_and_cleans_temp_files(tmp_path):
+    path = tmp_path / "state.json"
+    write_json_atomic(path, {"cursor": "bar-1", "accounts": {"BTC": {"cash": 10}}})
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "cursor": "bar-1", "accounts": {"BTC": {"cash": 10}}
+    }
+    assert list(tmp_path.glob(".state.json.*.tmp")) == []
+
+
+def test_exclusive_paper_lock_creates_lock_file_and_releases(tmp_path):
+    lock_path = tmp_path / "paper.lock"
+    with exclusive_file_lock(lock_path):
+        assert lock_path.exists()
+        assert lock_path.is_file()
+    with exclusive_file_lock(lock_path):
+        assert lock_path.exists()
