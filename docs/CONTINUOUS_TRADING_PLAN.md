@@ -8,7 +8,8 @@ Build an unattended, restart-safe trading process that can operate continuously 
 
 - The repository is research-first and paper-only. No exchange orders are submitted.
 - GitHub Actions runs the research pipeline on an hourly schedule. Scheduled Actions are not a continuously running trading daemon and may be delayed.
-- The paper engine processes completed candles and persists a cursor/state between runs.
+- A local `python -m quantlab.cli continuous --config config/settings.yaml` supervisor now polls public market data hourly, validates fresh crypto/futures data, runs paper processing, writes a heartbeat and retries failed cycles with bounded backoff. It is REST polling, not tick-level WebSocket execution.
+- Paper state writes are atomic, each completed account is checkpointed, and an OS file lock prevents overlapping paper processes. The persisted cursor allows missed completed candles to be replayed after recovery.
 - The current venue-constrained paper portfolio has no fills because the 100 RUB starting balance is below the lowest configured minimum-order capital (about 118.58 RUB at the latest report).
 - Fractional shadow results ignore venue minimums and are not executable.
 - No tested strategy currently passes the 5% family-wise statistical significance threshold. ADX on ETH is a research candidate, not an approved strategy.
@@ -58,7 +59,8 @@ Build an unattended, restart-safe trading process that can operate continuously 
 ## Deployment stages and release gates
 
 ### Stage A — Reliable continuous paper
-- Implement a persistent event loop and WebSocket-to-REST recovery.
+- Implemented: persistent polling supervisor, heartbeat, bounded retry/backoff, freshness gate, atomic state writes, per-account checkpoints and process lock.
+- Remaining: WebSocket stream, REST gap-recovery reconciliation, feed sequence monitoring and operational alert delivery.
 - Keep all exchange actions read-only; simulate fills with conservative spread, slippage, fees, partial fills and minimum sizes.
 - Run for at least 14 consecutive days without state loss, duplicate processing or unexplained gaps.
 - Require zero unexplained reconciliation mismatches and passing automated restart/disconnect tests.
