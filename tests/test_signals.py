@@ -11,6 +11,7 @@ SIGNAL_COLUMNS = [
     "sma_signal",
     "macd_signal",
     "roc_signal",
+    "adx_signal",
 ]
 
 
@@ -66,7 +67,7 @@ def test_directional_signals_are_bounded_and_detect_trend_directions():
     columns = [
         "ema_direction", "rsi_direction", "bb_direction",
         "donchian_direction", "sma_direction", "macd_direction",
-        "roc_direction",
+        "roc_direction", "adx_direction",
     ]
     for column in columns:
         assert set(result[column].dropna().unique()).issubset({-1, 0, 1})
