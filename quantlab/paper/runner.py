@@ -442,6 +442,30 @@ def _write_experiment_status_report(venue_summary, fractional_summary):
                 f"{float(row['positive_fold_pct']):.1f}% | {int(row['folds'])} |"
             )
 
+    long_short_ranking_path = REPORTS / "futures_long_short_walk_forward_ranking.csv"
+    if long_short_ranking_path.exists():
+        long_short_ranking = pd.read_csv(long_short_ranking_path)
+        for risk_mode in ("baseline", "risk_controlled"):
+            subset = long_short_ranking.loc[
+                long_short_ranking["risk_mode"] == risk_mode
+            ].sort_values("median_test_return_pct", ascending=False).head(3)
+            if subset.empty:
+                continue
+            lines.extend([
+                "",
+                f"### Long/short futures — {risk_mode}",
+                "",
+                "| Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |",
+                "|---|---|---:|---:|---:|",
+            ])
+            for _, row in subset.iterrows():
+                lines.append(
+                    f"| {row['dataset']} | {row['strategy']} | "
+                    f"{float(row['median_test_return_pct']):+.4f}% | "
+                    f"{float(row['positive_fold_pct']):.1f}% | "
+                    f"{float(row['median_test_max_drawdown_pct']):.2f}% |"
+                )
+
     statistical_path = REPORTS / "statistical_validation.csv"
     if statistical_path.exists():
         statistical = pd.read_csv(statistical_path)
