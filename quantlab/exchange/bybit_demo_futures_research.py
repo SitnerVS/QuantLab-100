@@ -69,6 +69,17 @@ def _build_direction_signals(enriched):
     data["donchian_direction"] = 0
     data.loc[close > data["donchian_upper_prev"], "donchian_direction"] = 1
     data.loc[close < data["donchian_lower_prev"], "donchian_direction"] = -1
+
+    data["adx_direction"] = 0
+    strong_trend = data["adx14"] > 20
+    data.loc[
+        strong_trend & (data["plus_di14"] > data["minus_di14"]),
+        "adx_direction",
+    ] = 1
+    data.loc[
+        strong_trend & (data["minus_di14"] > data["plus_di14"]),
+        "adx_direction",
+    ] = -1
     return data
 
 
