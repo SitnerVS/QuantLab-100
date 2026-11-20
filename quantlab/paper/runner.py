@@ -219,9 +219,10 @@ def _unprocessed_signal_rows(enriched, last_bar):
 
 
 def _process_account_bars(cfg, account, enriched, sleeve, key, usd_rub_rate, experiment, ignore_venue_minimums=False):
+    continuous_mode = bool(cfg.get("paper", {}).get("continuous_mode", False))
     pending = (
         []
-        if experiment["status"] == "COMPLETED"
+        if experiment["status"] == "COMPLETED" and not continuous_mode
         else _unprocessed_signal_rows(enriched, account.get("last_bar"))
     )
     account_events = []
@@ -310,7 +311,7 @@ def _process_account_bars(cfg, account, enriched, sleeve, key, usd_rub_rate, exp
         snapshot["venue_minimums_ignored"] = True
     else:
         snapshot["venue_minimums_ignored"] = False
-    if experiment["status"] == "COMPLETED":
+    if experiment["status"] == "COMPLETED" and not continuous_mode:
         account_events.append({"timestamp": bar_time, "status": "experiment_completed"})
     return account, account_events, snapshot
 
@@ -343,7 +344,7 @@ def _run_fractional_shadow(cfg, paths, counts, accounts, experiment, usd_rub_rat
             key = path.stem
             account = accounts.get(key)
             if account is None:
-                if experiment["status"] == "COMPLETED":
+                if experiment["status"] == "COMPLETED" and not bool(cfg.get("paper", {}).get("continuous_mode", False)):
                     continue
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
                 allocation_rub = sleeve_capital / max(1, counts[sleeve])
@@ -557,7 +558,7 @@ def run_paper(cfg):
             key = path.stem
             account = state["accounts"].get(key)
             if account is None:
-                if experiment["status"] == "COMPLETED":
+                if experiment["status"] == "COMPLETED" and not bool(cfg.get("paper", {}).get("continuous_mode", False)):
                     continue
                 sleeve_capital = float(cfg["capital"]["portfolios"][sleeve])
                 allocation_rub = sleeve_capital / max(1, counts[sleeve])
@@ -631,7 +632,8 @@ def run_paper(cfg):
         "experiment_end_utc": experiment["end_utc"],
         "experiment_elapsed_hours": experiment["elapsed_hours"],
         "experiment_remaining_hours": experiment["remaining_hours"],
-        "experiment_status": experiment["status"],
+        "experiment_status": "CONTINUOUS_PAPER" if bool(cfg.get("paper", {}).get("continuous_mode", False)) else experiment["status"],
+        "benchmark_status": experiment["status"],
         "target_equity_rub": target_equity_rub,
         "total_initial_capital_rub": total_capital_rub,
         "execution_mode": "venue_constrained",
