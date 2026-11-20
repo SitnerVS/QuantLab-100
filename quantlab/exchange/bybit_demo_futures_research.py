@@ -12,7 +12,7 @@ from quantlab.strategies import build_signals
 
 STRATEGIES = (
     "ema_signal", "rsi_signal", "bb_signal", "donchian_signal",
-    "sma_signal", "macd_signal", "roc_signal",
+    "sma_signal", "macd_signal", "roc_signal", "adx_signal",
 )
 DIRECTION_COLUMNS = {
     "ema_signal": "ema_direction",
@@ -22,6 +22,7 @@ DIRECTION_COLUMNS = {
     "sma_signal": "sma_direction",
     "macd_signal": "macd_direction",
     "roc_signal": "roc_direction",
+    "adx_signal": "adx_direction",
 }
 REQUIRED = {
     "timestamp", "open", "high", "low", "close", "volume",
