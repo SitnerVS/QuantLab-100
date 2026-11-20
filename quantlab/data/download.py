@@ -158,6 +158,62 @@ def download_forex(cfg):
             print(f"[forex proxy] ERROR {symbol}: {exc}")
 
 
+def _fetch_ohlcv_history(
+    exchange, symbol, timeframe, target_bars, page_limit, params=None, now=None
+):
+    """Fetch a bounded chronological OHLCV history using forward pagination."""
+    minutes = INTERVAL_MINUTES.get(timeframe)
+    if minutes is None:
+        raise ValueError(f"Unsupported timeframe for historical pagination: {timeframe}")
+    target_bars = int(target_bars)
+    page_limit = int(page_limit)
+    if target_bars < 1 or page_limit < 1:
+        raise ValueError("target_bars and page_limit must be positive")
+
+    now = now or datetime.now(timezone.utc)
+    interval_ms = minutes * 60 * 1000
+    cursor = int((now - timedelta(milliseconds=interval_ms * target_bars)).timestamp() * 1000)
+    latest_allowed = int(now.timestamp() * 1000)
+    rows_by_timestamp = {}
+    max_pages = (target_bars + page_limit - 1) // page_limit + 3
+
+    for page in range(max_pages):
+        batch = _retry(
+            f"{symbol} OHLCV page {page + 1}",
+            lambda: exchange.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe,
+                since=cursor,
+                limit=page_limit,
+                params=params or {},
+            ),
+        )
+        if not batch:
+            break
+        fresh = [
+            row for row in batch
+            if len(row) >= 6 and cursor <= int(row[0]) < latest_allowed
+        ]
+        if not fresh:
+            break
+        for row in fresh:
+            rows_by_timestamp[int(row[0])] = row
+        next_cursor = max(int(row[0]) for row in fresh) + interval_ms
+        if next_cursor <= cursor:
+            raise RuntimeError(f"{symbol}: OHLCV pagination cursor did not advance")
+        cursor = next_cursor
+        if len(rows_by_timestamp) >= target_bars:
+            break
+        if cursor >= latest_allowed:
+            break
+        time.sleep(max(0.0, float(getattr(exchange, "rateLimit", 0)) / 1000.0))
+
+    rows = [rows_by_timestamp[key] for key in sorted(rows_by_timestamp)]
+    if not rows:
+        raise RuntimeError(f"{symbol}: OHLCV history endpoint returned no rows")
+    return rows[-target_bars:]
+
+
 def download_futures(cfg):
     section = cfg["data"].get("futures", {})
     symbols = section.get("symbols", [])
@@ -180,14 +236,16 @@ def download_futures(cfg):
                 minimum = market.get("limits", {}).get("amount", {}).get("min")
             if minimum is None or float(minimum) <= 0:
                 raise RuntimeError(f"minimum contract quantity is unavailable for {instrument}")
-            candles = _retry(
-                f"{instrument} mark OHLCV",
-                lambda: exchange.fetch_ohlcv(
-                    symbol,
-                    timeframe=section.get("timeframe", "1h"),
-                    limit=int(section.get("limit", 720)),
-                    params={"price": "mark"},
-                ),
+            timeframe = section.get("timeframe", "1h")
+            target_bars = int(section.get("history_bars", section.get("limit", 720)))
+            page_limit = int(section.get("page_limit", section.get("limit", 720)))
+            candles = _fetch_ohlcv_history(
+                exchange,
+                symbol,
+                timeframe,
+                target_bars=target_bars,
+                page_limit=page_limit,
+                params={"price": "mark"},
             )
             frame = pd.DataFrame(
                 candles,
