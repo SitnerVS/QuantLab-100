@@ -5,6 +5,7 @@ import math
 
 import pandas as pd
 
+from quantlab.paper.persistence import exclusive_file_lock, write_json_atomic
 from quantlab.paper.engine import apply_paper_signal, new_account, rub_to_usd
 from quantlab.futures.engine import apply_isolated_futures_signal, new_futures_account
 from quantlab.strategies import build_signals
@@ -512,7 +513,7 @@ def _portfolio_target_metrics(
     }
 
 
-def run_paper(cfg):
+def _run_paper_unlocked(cfg):
     REPORTS.mkdir(parents=True, exist_ok=True)
     STATE.parent.mkdir(parents=True, exist_ok=True)
     now = datetime.now(timezone.utc)
@@ -598,6 +599,8 @@ def run_paper(cfg):
                 ignore_venue_minimums=False,
             )
             state["accounts"][key] = account
+            state["updated_at"] = now.isoformat()
+            write_json_atomic(STATE, state)
             events.extend({"dataset": key, "sleeve": sleeve, **event} for event in account_events)
             snapshots.append(snapshot)
         except Exception as exc:
@@ -609,7 +612,7 @@ def run_paper(cfg):
     )
 
     state["updated_at"] = now.isoformat()
-    STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_atomic(STATE, state)
     pd.DataFrame(events).to_csv(REPORTS / "paper_events_latest.csv", index=False)
     pd.DataFrame(snapshots).to_csv(REPORTS / "paper_portfolio_latest.csv", index=False)
     pd.DataFrame(fractional_events).to_csv(REPORTS / "paper_fractional_events_latest.csv", index=False)
@@ -770,3 +773,10 @@ def run_paper(cfg):
         f"{sum(event.get('status') in ('buy', 'sell', 'open', 'close', 'liquidation') for event in events)} fills/events; "
         "no real orders."
     )
+
+
+def run_paper(cfg):
+    """Run one paper cycle under an OS lock to prevent overlapping state writers."""
+    lock_path = STATE.with_suffix(".lock")
+    with exclusive_file_lock(lock_path):
+        return _run_paper_unlocked(cfg)
