@@ -23,7 +23,7 @@ def run_continuous(
     *,
     stop_event=None,
     heartbeat_path: str | Path = HEARTBEAT,
-    max_retry_seconds: int = 300,
+    max_retry_seconds: int | None = None,
 ):
     """Poll market data, validate freshness and run paper engine until stopped.
 
@@ -32,8 +32,8 @@ def run_continuous(
     missed completed candles on the next successful cycle.
     """
     section = cfg.get("continuous", {})
-    interval = int(interval_seconds or section.get("interval_seconds", 3600))
-    max_retry = int(max_retry_seconds or section.get("max_retry_seconds", 300))
+    interval = int(section.get("interval_seconds", 3600) if interval_seconds is None else interval_seconds)
+    max_retry = int(section.get("max_retry_seconds", 300) if max_retry_seconds is None else max_retry_seconds)
     if interval < 1 or max_retry < 1:
         raise ValueError("interval_seconds and max_retry_seconds must be positive")
 
