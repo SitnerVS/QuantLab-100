@@ -61,3 +61,6 @@ futures:
   spread_rate: 0.0002
   maintenance_margin_rate: 0.05
   liquidation_fee_rate: 0.025
+  # Research-only limits for the risk-controlled long/short comparison.
+  stop_loss_pct: 0.02
+  max_drawdown_pct: 0.10
