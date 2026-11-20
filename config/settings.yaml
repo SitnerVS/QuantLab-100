@@ -48,6 +48,10 @@ paper:
   max_position_fraction: 0.25
   continuous_mode: true
 
+continuous:
+  interval_seconds: 3600  # hourly closed-candle polling; not tick-level execution
+  max_retry_seconds: 300
+
 validation:
   train_bars: 180
   test_bars: 60
