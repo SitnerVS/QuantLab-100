@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-20T10:00:07.170779+00:00
+Updated (UTC): 2026-11-20T10:02:02.731200+00:00
 Paper mode: CONTINUOUS_PAPER; 72h benchmark: RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 20.48 h; remaining: 51.52 h
+Elapsed: 20.51 h; remaining: 51.49 h
 
 ## Target
 
@@ -18,7 +18,7 @@ Elapsed: 20.48 h; remaining: 51.52 h
 - Equity: 100.3169 RUB; total return: +0.31687%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 119.41 RUB; budget shortfall: 19.41 RUB
+- Lowest configured crypto minimum-order capital: 118.58 RUB; budget shortfall: 18.58 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
 - Cumulative rejected minimum-size orders: 36; new rejections this run: 0
 
