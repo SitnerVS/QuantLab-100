@@ -53,6 +53,8 @@ def test_sma_macd_and_momentum_detect_persistent_uptrend():
     assert result.iloc[-1]["sma_signal"] == 1
     assert result.iloc[-1]["macd_signal"] == 1
     assert result.iloc[-1]["roc_signal"] == 1
+    directional = build_direction_signals(result)
+    assert directional.iloc[-1]["adx_direction"] == 1
 
 
 
@@ -74,6 +76,7 @@ def test_directional_signals_are_bounded_and_detect_trend_directions():
     assert result.iloc[-1]["sma_direction"] == -1
     assert result.iloc[-1]["macd_direction"] == -1
     assert result.iloc[-1]["roc_direction"] == -1
+    assert result.iloc[-1]["adx_direction"] == -1
 
 
 def test_directional_signals_do_not_use_future_bars():
@@ -83,7 +86,7 @@ def test_directional_signals_do_not_use_future_bars():
     columns = [
         "ema_direction", "rsi_direction", "bb_direction",
         "donchian_direction", "sma_direction", "macd_direction",
-        "roc_direction",
+        "roc_direction", "adx_direction",
     ]
     pd.testing.assert_frame_equal(
         full.loc[:79, columns].reset_index(drop=True),
