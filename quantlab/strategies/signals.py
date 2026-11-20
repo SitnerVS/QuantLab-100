@@ -35,3 +35,45 @@ def build_signals(frame):
     data["macd_signal"] = (data["macd_line"] > data["macd_signal_line"]).astype(int)
     data["roc_signal"] = (data["roc_12"] > 0).astype(int)
     return data
+
+
+
+def build_direction_signals(enriched):
+    """Build causal -1/0/+1 signals for isolated long/short futures research."""
+    data = enriched.copy()
+    close = data["close"].astype(float)
+
+    def binary_direction(left, right):
+        direction = pd.Series(0, index=data.index, dtype=int)
+        valid = left.notna() & right.notna()
+        direction.loc[valid] = left.loc[valid].gt(right.loc[valid]).map(
+            {True: 1, False: -1}
+        )
+        return direction
+
+    data["ema_direction"] = binary_direction(data["ema_fast"], data["ema_slow"])
+    data["sma_direction"] = binary_direction(data["sma_fast"], data["sma_slow"])
+    data["macd_direction"] = binary_direction(
+        data["macd_line"], data["macd_signal_line"]
+    )
+
+    data["roc_direction"] = 0
+    valid_roc = data["roc_12"].notna()
+    data.loc[valid_roc, "roc_direction"] = data.loc[valid_roc, "roc_12"].gt(0).map(
+        {True: 1, False: -1}
+    )
+
+    data["rsi_direction"] = 0
+    data.loc[data["rsi"] < 30, "rsi_direction"] = 1
+    data.loc[data["rsi"] > 70, "rsi_direction"] = -1
+
+    data["bb_upper"] = data["bb_mid"] + 2 * data["bb_std"]
+    data["bb_direction"] = 0
+    data.loc[close < data["bb_lower"], "bb_direction"] = 1
+    data.loc[close > data["bb_upper"], "bb_direction"] = -1
+
+    data["donchian_lower_prev"] = data["low"].rolling(20).min().shift(1)
+    data["donchian_direction"] = 0
+    data.loc[close > data["donchian_upper_prev"], "donchian_direction"] = 1
+    data.loc[close < data["donchian_lower_prev"], "donchian_direction"] = -1
+    return data
