@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-20T10:05:13.991356+00:00
+Updated (UTC): 2026-11-20T10:07:13.751522+00:00
 Paper mode: CONTINUOUS_PAPER; 72h benchmark: RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 20.57 h; remaining: 51.43 h
+Elapsed: 20.60 h; remaining: 51.40 h
 
 ## Target
 
@@ -41,7 +41,7 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 |---|---|---:|---:|---:|
 | forex_RUB=X_1d.csv | bb_signal | +1.9775% | 66.7% | 6 |
 | forex_RUB=X_1d.csv | ema_signal | +0.8588% | 50.0% | 6 |
-| forex_JPY=X_1d.csv | rsi_signal | +0.1257% | 50.0% | 6 |
+| forex_GBPUSD=X_1d.csv | adx_signal | +0.3833% | 100.0% | 6 |
 
 ### Crypto futures
 
@@ -55,17 +55,17 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
+| futures_PF_ETHUSD_1h.csv | adx_signal | +1.4265% | 66.7% | -5.34% |
 | futures_PF_SOLUSD_1h.csv | sma_signal | -0.0047% | 44.4% | -5.02% |
 | futures_PF_SOLUSD_1h.csv | rsi_signal | -0.0426% | 44.4% | -2.71% |
-| futures_PF_XBTUSD_1h.csv | sma_signal | -0.5050% | 44.4% | -4.64% |
 
 ### Long/short futures — risk_controlled
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
+| futures_PF_ETHUSD_1h.csv | adx_signal | +1.3461% | 55.6% | -5.65% |
 | futures_PF_SOLUSD_1h.csv | sma_signal | -0.3731% | 44.4% | -4.98% |
 | futures_PF_SOLUSD_1h.csv | ema_signal | -0.4644% | 22.2% | -6.19% |
-| futures_PF_XBTUSD_1h.csv | sma_signal | -0.5788% | 22.2% | -5.08% |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
