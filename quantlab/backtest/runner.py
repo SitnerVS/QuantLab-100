@@ -165,7 +165,7 @@ def run_backtests(cfg):
                                 float(ls_returns.mean() / ls_std * (8760 ** 0.5))
                                 if pd.notna(ls_std) and ls_std > 0 else 0.0
                             ),
-                         })
+                        })
                         futures_long_short_rows.append({
                             "dataset": path.name,
                             "strategy": strategy,
@@ -176,8 +176,8 @@ def run_backtests(cfg):
                             directional,
                             direction_col,
                             futures_cfg,
-                            train_bars=int(validation_cfg.get("train_bars", 180)),
-                            test_bars=int(validation_cfg.get("test_bars", 60)),
+                            train_bars=int(futures_validation_cfg.get("train_bars", 180)),
+                            test_bars=int(futures_validation_cfg.get("test_bars", 60)),
                             fee_rate=fee,
                             slippage_rate=slippage,
                             spread_rate=spread,
