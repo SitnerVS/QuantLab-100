@@ -157,7 +157,16 @@ def run_backtests(cfg):
                         )
                         ls_returns = ls_result["equity"].pct_change().fillna(0.0)
                         ls_std = ls_returns.std(ddof=1)
+                        ls_seed = zlib.crc32(
+                            f"{path.name}:{strategy}:{risk_mode}".encode("utf-8")
+                        ) + 42
+                        ls_bootstrap = block_bootstrap_validation(
+                            ls_returns, block_size=24, n_bootstrap=500, seed=ls_seed
+                        )
                         ls_metrics.update({
+                            "bootstrap_ci_lower_pct": ls_bootstrap["bootstrap_ci_lower_pct"],
+                            "bootstrap_ci_upper_pct": ls_bootstrap["bootstrap_ci_upper_pct"],
+                            "block_bootstrap_p_value": ls_bootstrap["block_bootstrap_p_value"],
                             "risk_mode": risk_mode,
                             "stop_loss_pct": stop_pct,
                             "max_drawdown_pct_limit": drawdown_pct,
@@ -171,6 +180,14 @@ def run_backtests(cfg):
                             "strategy": strategy,
                             "direction_column": direction_col,
                             **ls_metrics,
+                        })
+                        statistical_rows.append({
+                            "dataset": path.name,
+                            "market_type": "futures_long_short",
+                            "strategy": strategy,
+                            "risk_mode": risk_mode,
+                            "block_size": 24,
+                            **ls_bootstrap,
                         })
                         ls_folds = walk_forward_futures_long_short_evaluate(
                             directional,
