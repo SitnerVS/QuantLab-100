@@ -26,6 +26,8 @@ data:
     symbols: ["PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"]
     timeframe: "1h"
     limit: 720
+    history_bars: 4320  # 180 days of hourly mark candles
+    page_limit: 720
     min_order_sizes:
       PF_XBTUSD: 0.0001
       PF_ETHUSD: 0.001
@@ -48,6 +50,10 @@ paper:
 validation:
   train_bars: 180
   test_bars: 60
+
+futures_validation:
+  train_bars: 1440  # 60 days of hourly futures history
+  test_bars: 336    # 14 days of out-of-sample evaluation
 
 bybit_demo_futures_validation:
   train_bars: 1440  # 60 days of hourly mark-price bars
