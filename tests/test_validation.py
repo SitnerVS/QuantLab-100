@@ -1,6 +1,6 @@
 import pandas as pd
 
-from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward, walk_forward_futures_evaluate
+from quantlab.backtest.validation import walk_forward_evaluate, summarize_walk_forward, walk_forward_futures_evaluate, walk_forward_futures_long_short_evaluate
 
 
 def test_walk_forward_windows_are_chronological_and_non_overlapping():
@@ -68,3 +68,31 @@ def test_futures_walk_forward_uses_margin_and_funding_engine():
     assert len(rows) == 3
     assert rows[0]["test_observations"] == 2
     assert rows[0]["test_liquidations"] == 0
+
+
+
+def test_long_short_futures_walk_forward_applies_risk_controls():
+    frame = pd.DataFrame({
+        "open": [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0],
+        "high": [100.0, 101.0, 103.0, 104.0, 103.0, 101.0, 100.0, 99.0],
+        "low": [100.0, 99.0, 98.0, 99.0, 98.0, 97.0, 98.0, 98.0],
+        "close": [100.0, 100.0, 101.0, 102.0, 100.0, 99.0, 99.0, 99.0],
+        "direction": [1, 1, 1, 1, -1, -1, -1, -1],
+        "funding_rate": [0.0] * 8,
+        "min_order_size": [0.0] * 8,
+        "min_notional_usd": [0.0] * 8,
+    })
+    cfg = {
+        "leverage": 2.0,
+        "max_margin_fraction": 0.25,
+        "maintenance_margin_rate": 0.01,
+        "liquidation_fee_rate": 0.0,
+    }
+    rows = walk_forward_futures_long_short_evaluate(
+        frame, "direction", cfg, train_bars=3, test_bars=2,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        stop_loss_pct=0.02, max_drawdown_pct=0.10,
+    )
+    assert len(rows) == 3
+    assert all("test_stop_losses" in row for row in rows)
+    assert all("test_kill_switches" in row for row in rows)
