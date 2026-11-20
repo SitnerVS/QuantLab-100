@@ -24,7 +24,7 @@ def test_position_size_rounds_down_to_exchange_step():
 def test_position_rejected_if_venue_minimum_would_exceed_risk_budget():
     result = calculate_position_size(
         100, 100, 99, risk_fraction=0.0025,
-        min_quantity=0.01,
+        min_quantity=0.3,
     )
     assert result["accepted"] is False
     assert result["reason"] == "below_minimum_quantity"
