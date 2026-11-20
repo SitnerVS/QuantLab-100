@@ -233,6 +233,17 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
     pd.DataFrame([{"holm_adjusted_p_value": 1.0}]).to_csv(
         tmp_path / "statistical_validation.csv", index=False
     )
+    pd.DataFrame([{
+        "dataset": "futures_PF_SOLUSD_1h.csv",
+        "strategy": "sma_signal",
+        "risk_mode": "risk_controlled",
+        "folds": 9,
+        "median_test_return_pct": -0.7,
+        "positive_fold_pct": 44.4,
+        "median_test_max_drawdown_pct": -4.9,
+    }]).to_csv(
+        tmp_path / "futures_long_short_walk_forward_ranking.csv", index=False
+    )
     venue = pd.DataFrame([{
         "timestamp_utc": "2026-11-19T13:00:00Z",
         "experiment_id": "test",
@@ -272,6 +283,8 @@ def test_experiment_status_report_marks_fractional_view_non_executable(tmp_path,
     assert "NON-EXECUTABLE" in report
     assert "cannot be placed at the exchange" in report
     assert "bb_signal" in report
+    assert "Long/short futures — risk_controlled" in report
+    assert "sma_signal" in report
     assert "Holm-adjusted p-value" in report
     assert "open positions: 6" in report
     assert "budget shortfall: 22.71 RUB" in report
