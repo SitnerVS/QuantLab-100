@@ -1,6 +1,6 @@
 import pandas as pd
 
-from quantlab.strategies import build_signals
+from quantlab.strategies import build_signals, build_direction_signals
 
 
 SIGNAL_COLUMNS = [
@@ -52,3 +52,39 @@ def test_sma_macd_and_momentum_detect_persistent_uptrend():
     assert result.iloc[-1]["sma_signal"] == 1
     assert result.iloc[-1]["macd_signal"] == 1
     assert result.iloc[-1]["roc_signal"] == 1
+
+
+
+def test_directional_signals_are_bounded_and_detect_trend_directions():
+    frame = _sample_frame(120)
+    frame["close"] = [200 - i for i in range(120)]
+    frame["open"] = frame["close"] + 0.2
+    frame["high"] = frame["close"] + 0.5
+    frame["low"] = frame["close"] - 0.5
+    enriched = build_signals(frame)
+    result = build_direction_signals(enriched)
+    columns = [
+        "ema_direction", "rsi_direction", "bb_direction",
+        "donchian_direction", "sma_direction", "macd_direction",
+        "roc_direction",
+    ]
+    for column in columns:
+        assert set(result[column].dropna().unique()).issubset({-1, 0, 1})
+    assert result.iloc[-1]["sma_direction"] == -1
+    assert result.iloc[-1]["macd_direction"] == -1
+    assert result.iloc[-1]["roc_direction"] == -1
+
+
+def test_directional_signals_do_not_use_future_bars():
+    frame = _sample_frame(120)
+    full = build_direction_signals(build_signals(frame))
+    truncated = build_direction_signals(build_signals(frame.iloc[:80]))
+    columns = [
+        "ema_direction", "rsi_direction", "bb_direction",
+        "donchian_direction", "sma_direction", "macd_direction",
+        "roc_direction",
+    ]
+    pd.testing.assert_frame_equal(
+        full.loc[:79, columns].reset_index(drop=True),
+        truncated[columns].reset_index(drop=True),
+    )
