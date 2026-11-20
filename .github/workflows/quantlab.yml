@@ -3,6 +3,9 @@ name: QuantLab scheduled research
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "reports/**"
+      - "data/processed/**"
   pull_request:
     branches: [main]
   workflow_dispatch:
