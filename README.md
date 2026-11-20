@@ -57,7 +57,7 @@ Run the unattended hourly paper supervisor on an always-on Mac/Linux host with:
 
 `python -m quantlab.cli continuous --config config/settings.yaml`
 
-Stop it with Ctrl+C. It polls public data, checks freshness, runs paper-only processing, records `reports/continuous_heartbeat.json`, and retries failed cycles. It does not stream ticks or submit Demo/live orders.
+On macOS, an optional LaunchAgent installer is available: `bash scripts/install_macos_paper_agent.sh`. It creates a Python virtual environment, installs dependencies, starts the service at login and uses `caffeinate -i` to keep the Mac awake while it runs. Stop it with `launchctl bootout gui/$UID ~/Library/LaunchAgents/com.quantlab.paper.plist`. The service polls public data, checks freshness, runs paper-only processing, records `reports/continuous_heartbeat.json`, and retries failed cycles. It does not stream ticks or submit Demo/live orders.
 
 
 The target architecture, operating stages, risk guardrails and release gates are documented in [docs/CONTINUOUS_TRADING_PLAN.md](docs/CONTINUOUS_TRADING_PLAN.md). The current repository remains paper-only: there is no live order adapter enabled.
