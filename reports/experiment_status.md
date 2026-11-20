@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-20T09:58:43.748754+00:00
-Experiment: quantlab-100-paper-72h-v1 — RUNNING
+Updated (UTC): 2026-11-20T10:00:07.170779+00:00
+Paper mode: CONTINUOUS_PAPER; 72h benchmark: RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 20.46 h; remaining: 51.54 h
+Elapsed: 20.48 h; remaining: 51.52 h
 
 ## Target
 
