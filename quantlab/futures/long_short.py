@@ -183,9 +183,16 @@ def apply_long_short_signal(
 
     # Account-level kill switch uses equity marked at the completed bar close.
     peak_equity = float(account.get("peak_equity", account["initial_cash"]))
+    # Evaluate account drawdown at the adverse intrabar extreme, not only
+    # at candle close, so a wick cannot breach the risk limit unnoticed.
+    risk_mark_price = mark_price
+    if position is not None:
+        risk_mark_price = (
+            low_price if int(position["direction"]) == 1 else high_price
+        )
     current_unrealized = (
         int(position["direction"]) * float(position["quantity"])
-        * (mark_price - float(position["entry_price"]))
+        * (risk_mark_price - float(position["entry_price"]))
         if position is not None else 0.0
     )
     current_margin = float(position["margin_balance"]) if position is not None else 0.0
@@ -197,7 +204,7 @@ def apply_long_short_signal(
     ):
         if position is not None:
             direction = int(position["direction"])
-            fill = mark_price * (1.0 - impact * direction)
+            fill = risk_mark_price * (1.0 - impact * direction)
             gross_pnl = direction * float(position["quantity"]) * (
                 fill - float(position["entry_price"])
             )
