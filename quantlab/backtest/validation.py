@@ -183,7 +183,12 @@ def walk_forward_futures_long_short_evaluate(
     stop_loss_pct=None,
     max_drawdown_pct=None,
 ):
-    """Chronological out-of-sample folds for isolated long/short futures."""
+    """Evaluate independent chronological OOS folds with a fresh paper account.
+
+    Indicator values are calculated causally on the full series. Each test fold
+    starts with fresh capital and no inherited position, so a kill switch in one
+    fold cannot silently disable all later folds.
+    """
     from quantlab.futures.long_short import simulate_isolated_long_short
 
     if train_bars < 2 or test_bars < 1:
@@ -191,43 +196,40 @@ def walk_forward_futures_long_short_evaluate(
     if len(frame) <= train_bars:
         return []
 
-    result, _ = simulate_isolated_long_short(
-        frame,
-        signal_col=signal_col,
-        funding_col="funding_rate",
-        initial_cash=initial_cash,
-        leverage=float(futures_cfg["leverage"]),
-        max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
-        fee_rate=fee_rate,
-        slippage_rate=slippage_rate,
-        spread_rate=spread_rate,
-        maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
-        liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
-        stop_loss_pct=stop_loss_pct,
-        max_drawdown_pct=max_drawdown_pct,
-    )
-    period_returns = result["equity"].pct_change().fillna(0.0)
     rows = []
     fold = 0
-    for test_start in range(train_bars, len(result), test_bars):
-        test_end = min(test_start + test_bars, len(result))
-        returns = period_returns.iloc[test_start:test_end].astype(float)
-        if returns.empty:
+    for test_start in range(train_bars, len(frame), test_bars):
+        test_end = min(test_start + test_bars, len(frame))
+        # The preceding bar supplies the first valid lagged signal.
+        fold_frame = frame.iloc[test_start - 1:test_end].reset_index(drop=True)
+        result, _ = simulate_isolated_long_short(
+            fold_frame,
+            signal_col=signal_col,
+            funding_col="funding_rate",
+            initial_cash=initial_cash,
+            leverage=float(futures_cfg["leverage"]),
+            max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+            fee_rate=fee_rate,
+            slippage_rate=slippage_rate,
+            spread_rate=spread_rate,
+            maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+            liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+            stop_loss_pct=stop_loss_pct,
+            max_drawdown_pct=max_drawdown_pct,
+        )
+        test_result = result.iloc[1:].reset_index(drop=True)
+        if test_result.empty:
             continue
         fold += 1
-        start_equity = float(result["equity"].iloc[test_start - 1])
-        end_equity = float(result["equity"].iloc[test_end - 1])
-        if start_equity > 0:
-            normalized = start_equity * (1.0 + returns).cumprod()
-            fold_return = (end_equity / start_equity - 1.0) * 100.0
-            curve = pd.concat(
-                [pd.Series([start_equity]), normalized.reset_index(drop=True)],
-                ignore_index=True,
-            )
-            drawdown = curve / curve.cummax() - 1.0
-        else:
-            fold_return = -100.0
-            drawdown = pd.Series([-1.0])
+        equity = test_result["equity"].astype(float)
+        curve = pd.concat(
+            [pd.Series([float(initial_cash)]), equity.reset_index(drop=True)],
+            ignore_index=True,
+        )
+        drawdown = curve / curve.cummax() - 1.0
+        returns = equity.pct_change().fillna(
+            equity.iloc[0] / float(initial_cash) - 1.0
+        )
         std = returns.std(ddof=1)
         sharpe = (
             float(returns.mean() / std * (8760 ** 0.5))
@@ -236,15 +238,15 @@ def walk_forward_futures_long_short_evaluate(
         rows.append({
             "fold": fold,
             "train_observations": int(test_start),
-            "test_observations": int(test_end - test_start),
+            "test_observations": int(len(test_result)),
             "test_start_index": int(test_start),
             "test_end_index_exclusive": int(test_end),
-            "test_return_pct": float(fold_return),
+            "test_return_pct": float((equity.iloc[-1] / float(initial_cash) - 1.0) * 100.0),
             "test_max_drawdown_pct": float(drawdown.min() * 100.0),
             "test_sharpe_annualized": sharpe,
-            "test_liquidations": int(result["liquidated"].iloc[test_start:test_end].sum()),
-            "test_stop_losses": int(result["stop_loss_triggered"].iloc[test_start:test_end].sum()),
-            "test_kill_switches": int(result["drawdown_kill_switch"].iloc[test_start:test_end].sum()),
-            "test_funding_paid_quote": float(result["funding_payment"].iloc[test_start:test_end].sum()),
+            "test_liquidations": int(test_result["liquidated"].sum()),
+            "test_stop_losses": int(test_result["stop_loss_triggered"].sum()),
+            "test_kill_switches": int(test_result["drawdown_kill_switch"].sum()),
+            "test_funding_paid_quote": float(test_result["funding_payment"].sum()),
         })
     return rows
