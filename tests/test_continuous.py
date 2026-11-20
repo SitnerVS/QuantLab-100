@@ -68,3 +68,10 @@ def test_continuous_supervisor_fails_closed_when_all_trading_data_is_stale(
     assert saved["status"] == "ERROR"
     assert "No fresh crypto/futures" in saved["last_error"]
     assert saved["exchange_orders_enabled"] is False
+
+
+def test_continuous_supervisor_rejects_zero_interval():
+    import pytest
+
+    with pytest.raises(ValueError, match="must be positive"):
+        continuous.run_continuous({}, interval_seconds=0)
