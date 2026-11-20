@@ -8,10 +8,12 @@ from quantlab.backtest.validation import (
     walk_forward_evaluate,
     summarize_walk_forward,
     walk_forward_futures_evaluate,
+    walk_forward_futures_long_short_evaluate,
 )
 from quantlab.futures.engine import simulate_isolated_long
+from quantlab.futures.long_short import simulate_isolated_long_short
 from quantlab.backtest.statistics import block_bootstrap_validation, holm_adjust
-from quantlab.strategies import build_signals
+from quantlab.strategies import build_signals, build_direction_signals
 
 RAW = Path("data/raw")
 REPORTS = Path("reports")
@@ -27,6 +29,8 @@ def run_backtests(cfg):
     spot_walk_forward_rows = []
     futures_rows = []
     futures_walk_forward_rows = []
+    futures_long_short_rows = []
+    futures_long_short_walk_forward_rows = []
     statistical_rows = []
 
     quality_path = REPORTS / "data_quality.csv"
@@ -59,6 +63,18 @@ def run_backtests(cfg):
                 fee = float(futures_cfg["fee_rate"])
                 slippage = float(futures_cfg["slippage_rate"])
                 spread = float(futures_cfg["spread_rate"])
+                stop_loss_pct = futures_cfg.get("stop_loss_pct", 0.02)
+                max_drawdown_pct = futures_cfg.get("max_drawdown_pct", 0.10)
+                directional = build_direction_signals(enriched)
+                direction_columns = {
+                    "ema_signal": "ema_direction",
+                    "rsi_signal": "rsi_direction",
+                    "bb_signal": "bb_direction",
+                    "donchian_signal": "donchian_direction",
+                    "sma_signal": "sma_direction",
+                    "macd_signal": "macd_direction",
+                    "roc_signal": "roc_direction",
+                }
                 for strategy in STRATEGIES:
                     result, metrics = simulate_isolated_long(
                         enriched,
@@ -117,6 +133,67 @@ def run_backtests(cfg):
                             "strategy": strategy,
                             **fold_metrics,
                         })
+
+                    direction_col = direction_columns[strategy]
+                    for risk_mode, stop_pct, drawdown_pct in (
+                        ("baseline", None, None),
+                        ("risk_controlled", stop_loss_pct, max_drawdown_pct),
+                    ):
+                        ls_result, ls_metrics = simulate_isolated_long_short(
+                            directional,
+                            signal_col=direction_col,
+                            funding_col="funding_rate",
+                            initial_cash=initial_cash,
+                            leverage=float(futures_cfg["leverage"]),
+                            max_margin_fraction=float(futures_cfg["max_margin_fraction"]),
+                            fee_rate=fee,
+                            slippage_rate=slippage,
+                            spread_rate=spread,
+                            maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
+                            liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                            stop_loss_pct=stop_pct,
+                            max_drawdown_pct=drawdown_pct,
+                        )
+                        ls_returns = ls_result["equity"].pct_change().fillna(0.0)
+                        ls_std = ls_returns.std(ddof=1)
+                        ls_metrics.update({
+                            "risk_mode": risk_mode,
+                            "stop_loss_pct": stop_pct,
+                            "max_drawdown_pct_limit": drawdown_pct,
+                            "sharpe_annualized_rough": (
+                                float(ls_returns.mean() / ls_std * (8760 ** 0.5))
+                                if pd.notna(ls_std) and ls_std > 0 else 0.0
+                            ),
+                            "median_bar_turnover_usd": float(
+                                (ls_result["position"].abs() * ls_result["close"]).median()
+                            ),
+                        })
+                        futures_long_short_rows.append({
+                            "dataset": path.name,
+                            "strategy": strategy,
+                            "direction_column": direction_col,
+                            **ls_metrics,
+                        })
+                        ls_folds = walk_forward_futures_long_short_evaluate(
+                            directional,
+                            direction_col,
+                            futures_cfg,
+                            train_bars=int(validation_cfg.get("train_bars", 180)),
+                            test_bars=int(validation_cfg.get("test_bars", 60)),
+                            fee_rate=fee,
+                            slippage_rate=slippage,
+                            spread_rate=spread,
+                            initial_cash=initial_cash,
+                            stop_loss_pct=stop_pct,
+                            max_drawdown_pct=drawdown_pct,
+                        )
+                        for fold_metrics in ls_folds:
+                            futures_long_short_walk_forward_rows.append({
+                                "dataset": path.name,
+                                "strategy": strategy,
+                                "risk_mode": risk_mode,
+                                **fold_metrics,
+                            })
                 continue
 
             is_crypto = path.name.startswith("crypto_")
@@ -181,6 +258,12 @@ def run_backtests(cfg):
 
     pd.DataFrame(futures_rows).to_csv(REPORTS / "futures_backtest_summary.csv", index=False)
     pd.DataFrame(futures_walk_forward_rows).to_csv(REPORTS / "futures_walk_forward_summary.csv", index=False)
+    pd.DataFrame(futures_long_short_rows).to_csv(
+        REPORTS / "futures_long_short_backtest_summary.csv", index=False
+    )
+    pd.DataFrame(futures_long_short_walk_forward_rows).to_csv(
+        REPORTS / "futures_long_short_walk_forward_summary.csv", index=False
+    )
     statistical = pd.DataFrame(statistical_rows)
     if not statistical.empty:
         statistical["holm_adjusted_p_value"] = holm_adjust(
@@ -190,6 +273,26 @@ def run_backtests(cfg):
     summarize_walk_forward(futures_walk_forward_rows).to_csv(
         REPORTS / "futures_walk_forward_ranking.csv", index=False
     )
+    if futures_long_short_walk_forward_rows:
+        ls_walk = pd.DataFrame(futures_long_short_walk_forward_rows)
+        ls_ranking = (
+            ls_walk.groupby(["dataset", "strategy", "risk_mode"], as_index=False)
+            .agg(
+                folds=("fold", "count"),
+                mean_test_return_pct=("test_return_pct", "mean"),
+                median_test_return_pct=("test_return_pct", "median"),
+                positive_fold_pct=("test_return_pct", lambda values: float((values > 0).mean() * 100)),
+                median_test_max_drawdown_pct=("test_max_drawdown_pct", "median"),
+                median_test_sharpe_annualized=("test_sharpe_annualized", "median"),
+                stop_losses=("test_stop_losses", "sum"),
+                kill_switches=("test_kill_switches", "sum"),
+                liquidations=("test_liquidations", "sum"),
+            )
+            .sort_values(["dataset", "risk_mode", "median_test_return_pct"], ascending=[True, True, False])
+        )
+    else:
+        ls_ranking = pd.DataFrame()
+    ls_ranking.to_csv(REPORTS / "futures_long_short_walk_forward_ranking.csv", index=False)
 
     print(f"Spot backtest rows: {len(spot_rows)}; spot walk-forward windows: {len(spot_walk_forward_rows)}")
     print(f"Futures backtest rows: {len(futures_rows)}; futures walk-forward windows: {len(futures_walk_forward_rows)}")
