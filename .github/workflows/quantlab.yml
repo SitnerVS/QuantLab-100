@@ -35,6 +35,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Validate macOS service installer
+        run: bash -n scripts/install_macos_paper_agent.sh
       - name: Run tests
         run: python -m pytest -q
       - name: Download data and run research
