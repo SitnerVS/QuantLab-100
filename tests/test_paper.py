@@ -185,7 +185,7 @@ def test_fractional_shadow_can_trade_below_venue_minimums(tmp_path):
             "futures": {"timeframe": "1h"},
         },
         "capital": {"portfolios": {"crypto_spot": 25.0}},
-        "paper": {"max_position_fraction": 0.25},
+        "paper": {"max_position_fraction": 0.25, "continuous_mode": True},
         "costs": {
             "crypto_fee_rate": 0.0,
             "forex_fee_rate": 0.0,
@@ -200,7 +200,7 @@ def test_fractional_shadow_can_trade_below_venue_minimums(tmp_path):
         [path],
         {"crypto_spot": 1},
         accounts,
-        {"status": "RUNNING"},
+        {"status": "COMPLETED"},
         usd_rub_rate=80.0,
         now=pd.Timestamp("2026-01-05T00:00:00Z").to_pydatetime(),
     )
@@ -345,3 +345,39 @@ def test_account_replays_missed_bars_in_chronological_order():
     assert updated["trade_count"] == 3
     assert snapshot["quantity"] > 0
 
+
+
+
+def test_continuous_paper_keeps_processing_bars_after_72_hour_benchmark():
+    times = pd.date_range("2026-01-01", periods=3, freq="h", tz="UTC")
+    enriched = pd.DataFrame({
+        "timestamp": times,
+        "open": [100.0, 101.0, 102.0],
+        "high": [100.5, 101.5, 102.5],
+        "low": [99.5, 100.5, 101.5],
+        "close": [100.0, 101.0, 102.0],
+        "ema_signal": [1, 1, 1],
+        "min_order_size": [0.0] * 3,
+        "min_notional_usd": [0.0] * 3,
+    })
+    account = new_account(100.0)
+    account["last_bar"] = times[0].isoformat()
+    cfg = {
+        "costs": {
+            "crypto_fee_rate": 0.0,
+            "forex_fee_rate": 0.0,
+            "slippage_rate": 0.0,
+            "crypto_spread_rate": 0.0,
+            "forex_spread_rate": 0.0,
+        },
+        "paper": {"max_position_fraction": 1.0, "continuous_mode": True},
+    }
+    updated, events, snapshot = _process_account_bars(
+        cfg, account, enriched, "crypto_spot", "crypto_TEST_1h",
+        usd_rub_rate=1.0, experiment={"status": "COMPLETED"},
+        ignore_venue_minimums=False,
+    )
+    assert [event["status"] for event in events] == ["buy", "hold"]
+    assert updated["last_bar"] == times[-1].isoformat()
+    assert snapshot["quantity"] > 0
+    assert all(event["status"] != "experiment_completed" for event in events)
