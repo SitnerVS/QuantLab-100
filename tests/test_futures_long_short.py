@@ -149,7 +149,7 @@ def test_long_position_uses_intrabar_stop_loss():
         stop_loss_pct=0.02,
     )
     assert result["event"].tolist() == ["hold", "open", "stop_loss"]
-    assert result.iloc[-1]["stop_loss_triggered"] is True
+    assert bool(result.iloc[-1]["stop_loss_triggered"]) is True
     assert result.iloc[-1]["position"] == 0
     assert result.iloc[-1]["equity"] == pytest.approx(98.0)
     assert metrics["stop_losses"] == 1
@@ -191,8 +191,8 @@ def test_account_drawdown_kill_switch_closes_and_prevents_new_positions():
         max_drawdown_pct=0.05,
     )
     assert result.iloc[2]["event"] == "max_drawdown_kill_switch"
-    assert result.iloc[2]["drawdown_kill_switch"] is True
-    assert result.iloc[2]["halted"] is True
+    assert bool(result.iloc[2]["drawdown_kill_switch"]) is True
+    assert bool(result.iloc[2]["halted"]) is True
     assert result.iloc[2]["position"] == 0
     assert result.iloc[3]["position"] == 0
     assert metrics["drawdown_kill_switch"] is True
