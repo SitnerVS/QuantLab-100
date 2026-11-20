@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-20T03:28:25.938265+00:00
+Updated (UTC): 2026-11-20T08:03:30.966813+00:00
 Experiment: quantlab-100-paper-72h-v1 — RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 13.95 h; remaining: 58.05 h
+Elapsed: 18.54 h; remaining: 53.46 h
 
 ## Target
 
@@ -18,7 +18,7 @@ Elapsed: 13.95 h; remaining: 58.05 h
 - Equity: 100.3169 RUB; total return: +0.31687%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 120.15 RUB; budget shortfall: 20.15 RUB
+- Lowest configured crypto minimum-order capital: 119.65 RUB; budget shortfall: 19.65 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
 - Cumulative rejected minimum-size orders: 36; new rejections this run: 0
 
@@ -49,7 +49,7 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 |---|---|---:|---:|---:|
 | futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0159% | 55.6% | 9 |
 | futures_PF_SOLUSD_1h.csv | donchian_signal | +0.0000% | 11.1% | 9 |
-| futures_PF_XBTUSD_1h.csv | donchian_signal | +0.0000% | 0.0% | 9 |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.0000% | 22.2% | 9 |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
