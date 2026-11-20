@@ -19,7 +19,7 @@ RAW = Path("data/raw")
 REPORTS = Path("reports")
 STRATEGIES = (
     "ema_signal", "rsi_signal", "bb_signal", "donchian_signal",
-    "sma_signal", "macd_signal", "roc_signal",
+    "sma_signal", "macd_signal", "roc_signal", "adx_signal",
 )
 
 
