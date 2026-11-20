@@ -46,6 +46,7 @@ backtest:
 
 paper:
   max_position_fraction: 0.25
+  continuous_mode: true
 
 validation:
   train_bars: 180
