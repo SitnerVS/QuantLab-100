@@ -147,3 +147,51 @@ def test_isolated_futures_backtest_rejects_below_minimum_notional():
     assert result.iloc[-1]["event"] == "below_minimum_notional"
     assert metrics["rejected_min_notional"] == 1
     assert result.iloc[-1]["position"] == 0
+
+
+
+def test_futures_stop_loss_triggers_on_intrabar_low_and_closes_position():
+    account = new_futures_account(100)
+    account, opened = apply_isolated_futures_signal(
+        account, 1, 100, 0.0, "bar-open",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    assert opened["status"] == "open"
+
+    account, stopped = apply_isolated_futures_signal(
+        account, 1, 100, 0.0, "bar-stop",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        low_price=97.5, open_price=100, stop_loss_pct=0.02,
+    )
+    assert stopped["status"] == "stop_loss"
+    assert stopped["stop_price"] == pytest.approx(98)
+    assert stopped["fill_price"] == pytest.approx(98)
+    assert account["position"] is None
+    assert account["closed_trades"] == 1
+    assert account["wallet"] == pytest.approx(98)
+
+
+def test_futures_stop_loss_models_gap_through_stop_at_adverse_open():
+    account = new_futures_account(100)
+    account, _ = apply_isolated_futures_signal(
+        account, 1, 100, 0.0, "bar-open",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+    )
+    account, stopped = apply_isolated_futures_signal(
+        account, 1, 95, 0.0, "bar-gap",
+        leverage=2, max_margin_fraction=0.5,
+        fee_rate=0, slippage_rate=0, spread_rate=0,
+        maintenance_margin_rate=0.01, liquidation_fee_rate=0,
+        low_price=94, open_price=95, stop_loss_pct=0.02,
+    )
+    assert stopped["status"] == "stop_loss"
+    assert stopped["stop_price"] == pytest.approx(98)
+    assert stopped["fill_price"] == pytest.approx(95)
+    assert account["position"] is None
+    assert account["wallet"] == pytest.approx(95)
