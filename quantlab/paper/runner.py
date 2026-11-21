@@ -249,6 +249,9 @@ def _process_account_bars(cfg, account, enriched, sleeve, key, usd_rub_rate, exp
                 spread_rate=float(futures_cfg["spread_rate"]),
                 maintenance_margin_rate=float(futures_cfg["maintenance_margin_rate"]),
                 liquidation_fee_rate=float(futures_cfg["liquidation_fee_rate"]),
+                low_price=float(latest["low"]) if "low" in latest else None,
+                open_price=float(latest["open"]) if "open" in latest else None,
+                stop_loss_pct=float(futures_cfg.get("stop_loss_pct", 0.0)),
                 min_order_size=(
                     0.0 if ignore_venue_minimums
                     else float(latest.get("min_order_size", 0.0))
