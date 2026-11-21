@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-21T02:31:39.236120+00:00
+Updated (UTC): 2026-11-21T11:19:57.509858+00:00
 Paper mode: CONTINUOUS_PAPER; 72h benchmark: RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 37.01 h; remaining: 34.99 h
+Elapsed: 45.81 h; remaining: 26.19 h
 
 ## Target
 
@@ -18,7 +18,7 @@ Elapsed: 37.01 h; remaining: 34.99 h
 - Equity: 100.1048 RUB; total return: +0.10483%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 112.91 RUB; budget shortfall: 12.91 RUB
+- Lowest configured crypto minimum-order capital: 111.75 RUB; budget shortfall: 11.75 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
 - Cumulative rejected minimum-size orders: 36; new rejections this run: 0
 
@@ -47,25 +47,25 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 
 | Dataset | Strategy | Median OOS return | Positive folds | Folds |
 |---|---|---:|---:|---:|
-| futures_PF_XBTUSD_1h.csv | rsi_signal | -0.1603% | 33.3% | 9 |
-| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.1825% | 22.2% | 9 |
+| futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0044% | 55.6% | 9 |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.1825% | 33.3% | 9 |
 | futures_PF_ETHUSD_1h.csv | rsi_signal | -0.3225% | 33.3% | 9 |
 
 ### Long/short futures — baseline
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_SOLUSD_1h.csv | sma_signal | +0.8817% | 66.7% | -4.80% |
-| futures_PF_ETHUSD_1h.csv | adx_signal | +0.0164% | 55.6% | -5.64% |
-| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.1331% | 44.4% | -2.40% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.3264% | 55.6% | -4.80% |
+| futures_PF_ETHUSD_1h.csv | adx_signal | -0.1945% | 44.4% | -5.63% |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.2154% | 44.4% | -2.56% |
 
 ### Long/short futures — risk_controlled
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_SOLUSD_1h.csv | sma_signal | +0.3907% | 55.6% | -4.81% |
-| futures_PF_ETHUSD_1h.csv | adx_signal | -0.0628% | 44.4% | -5.77% |
-| futures_PF_XBTUSD_1h.csv | ema_signal | -0.6382% | 22.2% | -5.10% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.1642% | 55.6% | -4.81% |
+| futures_PF_ETHUSD_1h.csv | adx_signal | -0.2406% | 44.4% | -5.78% |
+| futures_PF_XBTUSD_1h.csv | rsi_signal | -1.0055% | 22.2% | -1.85% |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
