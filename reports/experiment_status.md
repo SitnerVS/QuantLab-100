@@ -1,9 +1,9 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-21T17:24:46.398094+00:00
+Updated (UTC): 2026-11-21T19:25:40.466201+00:00
 Paper mode: CONTINUOUS_PAPER; 72h benchmark: RUNNING
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 51.89 h; remaining: 20.11 h
+Elapsed: 53.91 h; remaining: 18.09 h
 
 ## Target
 
@@ -18,17 +18,17 @@ Elapsed: 51.89 h; remaining: 20.11 h
 - Equity: 100.1048 RUB; total return: +0.10483%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 115.98 RUB; budget shortfall: 15.98 RUB
+- Lowest configured crypto minimum-order capital: 116.13 RUB; budget shortfall: 16.13 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
-- Cumulative rejected minimum-size orders: 36; new rejections this run: 0
+- Cumulative rejected minimum-size orders: 44; new rejections this run: 8
 
 ## Fractional shadow portfolio — NON-EXECUTABLE
 
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
-- Equity: 99.6831 RUB; total return: -0.31691%
-- Active return: -0.42255%; fills this run: 0; open positions: 0; closed trades: 6
-- Fees paid: 0.00057215 USD; funding paid (net sign as recorded): -0.00000123 USD
+- Equity: 99.6765 RUB; total return: -0.32351%
+- Active return: -0.43134%; fills this run: 4; open positions: 4; closed trades: 6
+- Fees paid: 0.00076326 USD; funding paid (net sign as recorded): -0.00000090 USD
 - Liquidations: 0
 
 ## Historical out-of-sample research
@@ -49,23 +49,23 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 |---|---|---:|---:|---:|
 | futures_PF_XBTUSD_1h.csv | rsi_signal | +0.0044% | 55.6% | 9 |
 | futures_PF_SOLUSD_1h.csv | rsi_signal | -0.1825% | 33.3% | 9 |
-| futures_PF_SOLUSD_1h.csv | bb_signal | -0.2853% | 11.1% | 9 |
+| futures_PF_XBTUSD_1h.csv | macd_signal | -0.2371% | 44.4% | 9 |
 
 ### Long/short futures — baseline
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_ETHUSD_1h.csv | ema_signal | +1.1343% | 55.6% | -5.60% |
-| futures_PF_SOLUSD_1h.csv | sma_signal | +0.3634% | 55.6% | -4.90% |
-| futures_PF_ETHUSD_1h.csv | sma_signal | +0.0220% | 55.6% | -5.26% |
+| futures_PF_ETHUSD_1h.csv | ema_signal | +1.4975% | 55.6% | -5.60% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.8099% | 66.7% | -4.90% |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.2154% | 44.4% | -2.07% |
 
 ### Long/short futures — risk_controlled
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_ETHUSD_1h.csv | ema_signal | +1.0697% | 55.6% | -5.37% |
-| futures_PF_SOLUSD_1h.csv | sma_signal | -0.1926% | 44.4% | -4.91% |
-| futures_PF_ETHUSD_1h.csv | sma_signal | -0.7563% | 44.4% | -5.62% |
+| futures_PF_ETHUSD_1h.csv | ema_signal | +0.9880% | 55.6% | -5.37% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | -0.1271% | 44.4% | -4.98% |
+| futures_PF_XBTUSD_1h.csv | adx_signal | -0.9595% | 33.3% | -3.68% |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
 No tested strategy passes the 5% family-wise significance threshold.
