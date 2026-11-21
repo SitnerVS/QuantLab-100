@@ -39,12 +39,16 @@ def apply_isolated_futures_signal(
     liquidation_fee_rate=0.025,
     min_order_size=0.0,
     min_notional_usd=0.0,
+    low_price=None,
+    open_price=None,
+    stop_loss_pct=0.0,
 ):
     """Apply one completed-bar signal to a persistent isolated-margin account.
 
     Positive funding rates are paid by longs; negative rates are received.
     Funding is applied before the signal transition at each settlement bar.
-    Mark and fill references use the completed candle close, not tick data.
+    Optional stop-loss checks use completed-candle low/open values; this is
+    conservative bar-level simulation, not exchange-native stop execution.
     """
     account = deepcopy(account)
     if account.get("last_bar") == timestamp:
@@ -64,6 +68,13 @@ def apply_isolated_futures_signal(
         raise ValueError("min_order_size must be finite and non-negative")
     if not math.isfinite(float(min_notional_usd)) or float(min_notional_usd) < 0:
         raise ValueError("min_notional_usd must be finite and non-negative")
+    stop_loss_pct = float(stop_loss_pct)
+    if not math.isfinite(stop_loss_pct) or not 0 <= stop_loss_pct < 1:
+        raise ValueError("stop_loss_pct must be finite and in [0, 1)")
+    if low_price is not None and (not math.isfinite(float(low_price)) or float(low_price) <= 0):
+        raise ValueError("low_price must be finite and positive")
+    if open_price is not None and (not math.isfinite(float(open_price)) or float(open_price) <= 0):
+        raise ValueError("open_price must be finite and positive")
     cost_rates = [fee_rate, slippage_rate, spread_rate, maintenance_margin_rate, liquidation_fee_rate]
     if any(not math.isfinite(float(rate)) or float(rate) < 0 for rate in cost_rates):
         raise ValueError("cost and margin rates must be finite and non-negative")
@@ -82,6 +93,7 @@ def apply_isolated_futures_signal(
     impact = float(slippage_rate) + float(spread_rate) / 2.0
     funding_payment = 0.0
     liquidated = False
+    stopped_out = False
 
     if position is not None:
         current_notional = float(position["quantity"]) * mark_price
@@ -89,24 +101,57 @@ def apply_isolated_futures_signal(
         position["margin_balance"] = float(position["margin_balance"]) - funding_payment
         position["funding_paid"] = float(position.get("funding_paid", 0.0)) + funding_payment
         account["funding_paid"] = float(account["funding_paid"]) + funding_payment
-        unrealized = float(position["quantity"]) * (mark_price - float(position["entry_price"]))
-        maintenance = current_notional * float(maintenance_margin_rate)
-        isolated_equity = float(position["margin_balance"]) + unrealized
 
-        if isolated_equity <= maintenance:
-            liquidation_fee = min(
-                max(0.0, isolated_equity),
-                current_notional * float(liquidation_fee_rate),
-            )
-            recovered = max(0.0, isolated_equity - liquidation_fee)
-            wallet += recovered
-            account["realized_pnl"] = float(account["realized_pnl"]) + recovered - float(position["margin_allocated"])
-            account["fees_paid"] = float(account["fees_paid"]) + liquidation_fee
+        stop_price = float(position["entry_price"]) * (1.0 - stop_loss_pct)
+        stop_triggered = (
+            stop_loss_pct > 0
+            and low_price is not None
+            and float(low_price) <= stop_price
+        )
+        if stop_triggered:
+            # If the candle opened below the stop, model the gap at its open.
+            stop_reference = stop_price
+            if open_price is not None and float(open_price) < stop_price:
+                stop_reference = float(open_price)
+            fill = stop_reference * (1.0 - impact)
+            quantity = float(position["quantity"])
+            gross_pnl = quantity * (fill - float(position["entry_price"]))
+            close_notional = quantity * fill
+            close_fee = close_notional * float(fee_rate)
+            released = max(0.0, float(position["margin_balance"]) + gross_pnl - close_fee)
+            wallet += released
+            account["realized_pnl"] = float(account["realized_pnl"]) + released - float(position["margin_allocated"])
+            account["fees_paid"] = float(account["fees_paid"]) + close_fee
+            account["closed_trades"] = int(account["closed_trades"]) + 1
+            event.update({
+                "status": "stop_loss",
+                "fill_price": fill,
+                "quantity": quantity,
+                "stop_price": stop_price,
+                "fee": close_fee,
+            })
             position = None
-            account["liquidations"] = int(account["liquidations"]) + 1
-            liquidated = True
-            event["status"] = "liquidation"
-            event["fee"] += liquidation_fee
+            stopped_out = True
+
+        if position is not None:
+            unrealized = float(position["quantity"]) * (mark_price - float(position["entry_price"]))
+            maintenance = current_notional * float(maintenance_margin_rate)
+            isolated_equity = float(position["margin_balance"]) + unrealized
+
+            if isolated_equity <= maintenance:
+                liquidation_fee = min(
+                    max(0.0, isolated_equity),
+                    current_notional * float(liquidation_fee_rate),
+                )
+                recovered = max(0.0, isolated_equity - liquidation_fee)
+                wallet += recovered
+                account["realized_pnl"] = float(account["realized_pnl"]) + recovered - float(position["margin_allocated"])
+                account["fees_paid"] = float(account["fees_paid"]) + liquidation_fee
+                position = None
+                account["liquidations"] = int(account["liquidations"]) + 1
+                liquidated = True
+                event["status"] = "liquidation"
+                event["fee"] += liquidation_fee
 
     if position is not None and signal == 0:
         fill = mark_price * (1.0 - impact)
@@ -122,7 +167,7 @@ def apply_isolated_futures_signal(
         event["fee"] += close_fee
         position = None
 
-    elif position is None and signal == 1 and not liquidated and wallet > 0:
+    elif position is None and signal == 1 and not liquidated and not stopped_out and wallet > 0:
         margin_allocated = wallet * float(max_margin_fraction)
         fill = mark_price * (1.0 + impact)
         notional = margin_allocated * float(leverage)
@@ -191,6 +236,7 @@ def simulate_isolated_long(
     spread_rate=0.0,
     maintenance_margin_rate=0.05,
     liquidation_fee_rate=0.025,
+    stop_loss_pct=0.0,
 ):
     """Run the persistent isolated-margin step engine across historical bars."""
     required = {"close", signal_col, funding_col}
@@ -224,6 +270,9 @@ def simulate_isolated_long(
             maintenance_margin_rate=maintenance_margin_rate,
             liquidation_fee_rate=liquidation_fee_rate,
             min_order_size=float(row.get("min_order_size", 0.0)),
+            low_price=row.get("low"),
+            open_price=row.get("open"),
+            stop_loss_pct=stop_loss_pct,
             min_notional_usd=float(row.get("min_notional_usd", 0.0)),
         )
         rows.append({
