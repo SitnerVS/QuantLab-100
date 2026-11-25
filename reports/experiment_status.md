@@ -1,24 +1,24 @@
 # QuantLab 100 — experiment status
 
-Updated (UTC): 2026-11-24T23:05:30.533856+00:00
+Updated (UTC): 2026-11-25T05:30:14.298793+00:00
 Paper mode: CONTINUOUS_PAPER; 72h benchmark: COMPLETED
 Window: 2026-11-19T13:31:09.436334+00:00 → 2026-11-22T13:31:09.436334+00:00
-Elapsed: 129.57 h; remaining: 0.00 h
+Elapsed: 135.98 h; remaining: 0.00 h
 
 ## Target
 
 - Starting capital: 100.00 RUB
 - Target equity: 10000.00 RUB
-- Current venue-constrained equity: 99.5016 RUB
-- Target progress: 0.9950%
+- Current venue-constrained equity: 99.8864 RUB
+- Target progress: 0.9989%
 - Required compound return to reach the target in 72 hours: 6.6050% per hour
 
 ## Venue-constrained paper portfolio
 
-- Equity: 99.5016 RUB; total return: -0.49838%
+- Equity: 99.8864 RUB; total return: -0.11358%
 - Active capital: 75.00 RUB; idle capital: 25.00 RUB
 - Capital blocked by venue minimum lots: 50.00 RUB
-- Lowest configured crypto minimum-order capital: 113.97 RUB; budget shortfall: 13.97 RUB
+- Lowest configured crypto minimum-order capital: 112.57 RUB; budget shortfall: 12.57 RUB
 - Fills this run: 0; open positions: 0; closed trades: 0
 - Cumulative rejected minimum-size orders: 366; new rejections this run: 0
 
@@ -26,8 +26,8 @@ Elapsed: 129.57 h; remaining: 0.00 h
 
 This separate research view deliberately ignores venue minimum order sizes. Its fractional fills cannot be placed at the exchange and must not be interpreted as executable trading results.
 
-- Equity: 98.6395 RUB; total return: -1.36049%
-- Active return: -1.81399%; fills this run: 0; open positions: 0; closed trades: 19
+- Equity: 99.0199 RUB; total return: -0.98014%
+- Active return: -1.30685%; fills this run: 0; open positions: 0; closed trades: 19
 - Fees paid: 0.00169878 USD; funding paid (net sign as recorded): 0.00001791 USD
 - Liquidations: 0
 
@@ -55,16 +55,16 @@ The tables below are exploratory rankings of fixed strategy rules on chronologic
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_SOLUSD_1h.csv | sma_signal | +0.4569% | 55.6% | -4.77% |
-| futures_PF_ETHUSD_1h.csv | ema_signal | +0.4328% | 55.6% | -5.15% |
-| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.0302% | 44.4% | -3.12% |
+| futures_PF_ETHUSD_1h.csv | ema_signal | +1.1355% | 55.6% | -5.28% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.9402% | 55.6% | -4.79% |
+| futures_PF_SOLUSD_1h.csv | rsi_signal | -0.2963% | 44.4% | -3.12% |
 
 ### Long/short futures — risk_controlled
 
 | Dataset | Strategy | Median OOS return | Positive folds | Median OOS drawdown |
 |---|---|---:|---:|---:|
-| futures_PF_ETHUSD_1h.csv | ema_signal | +0.3375% | 55.6% | -5.24% |
-| futures_PF_SOLUSD_1h.csv | sma_signal | -0.0420% | 44.4% | -4.93% |
+| futures_PF_ETHUSD_1h.csv | ema_signal | +1.0396% | 55.6% | -5.37% |
+| futures_PF_SOLUSD_1h.csv | sma_signal | +0.7823% | 55.6% | -4.95% |
 | futures_PF_ETHUSD_1h.csv | rsi_signal | -0.3788% | 33.3% | -2.25% |
 
 Minimum Holm-adjusted p-value across tested dataset/strategy combinations: 1.0000.
